@@ -73,9 +73,9 @@ window.GameConfig = {
   // 开局默认发现的食谱
   initialRecipes: ['butterCookie', 'spongeCake', 'eggTart'],
 
-  // 昼夜周期（毫秒）
-  dayDuration: 3 * 60 * 1000,    // 3分钟
-  nightDuration: 1 * 60 * 1000,  // 1分钟
+  // 昼夜周期（毫秒）- 测试阶段缩短方便体验
+  dayDuration: 30 * 1000,    // 30秒白天（正式版 3分钟）
+  nightDuration: 15 * 1000,  // 15秒夜晚（正式版 1分钟）
 
   // 店铺等级
   shopLevels: [
@@ -97,10 +97,10 @@ window.GameConfig = {
 
   // 探索配置
   explore: {
-    duration: 30 * 1000,  // 30秒
+    duration: 10 * 1000,  // 10秒（测试用）
     baseIngredientCount: 1,
     maxIngredientCount: 3,
-    spawnInterval: 25000,  // 顾客生成间隔（毫秒）
+    spawnInterval: 10000,  // 顾客生成间隔
   },
 
   // 出餐配置
@@ -112,10 +112,10 @@ window.GameConfig = {
 
   // 顾客
   customer: {
-    patienceMin: 20000,  // 最小耐心 20秒
-    patienceMax: 35000,  // 最大耐心 35秒
+    patienceMin: 15000,  // 最小耐心 15秒
+    patienceMax: 25000,  // 最大耐心 25秒
     patienceTick: 500,   // 每 tick 减少量
-    generateChance: 0.02, // 每 tick 生成概率
+    generateChance: 0.05, // 每 tick 生成概率（约每 10 秒一个）
     baseTip: 1.0,
   },
 
@@ -1748,9 +1748,9 @@ Renderer.prototype.drawDayScene = function (stats, customers) {
   // (在 main.js 计算后通过额外参数传入)
   if (stats.periodRemaining) {
     var secs = Math.ceil(stats.periodRemaining / 1000)
-    var min = Math.floor(secs / 60)
-    var sec = secs % 60
-    this.text('⏱ ' + min + ':' + (sec < 10 ? '0' : '') + sec, w / 2, bgY + 8, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+    if (secs > 0) {
+      this.text('🌙 夜晚研发倒计时 ' + secs + '秒', w / 2, bgY + 8, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+    }
   }
 
   // 底部按钮
@@ -1759,9 +1759,9 @@ Renderer.prototype.drawDayScene = function (stats, customers) {
   var btnH = 36
 
   this.drawButton(10, bY, btnW, btnH, '🔍 探索', { fontSize: 12 })
-  this.drawButton(15 + btnW, bY, btnW, btnH, '📋 菜单', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
-  this.drawButton(20 + btnW * 2, bY, btnW, btnH, '⬆ 升级', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
-  this.drawButton(25 + btnW * 3, bY, btnW, btnH, '📊 统计', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(15 + btnW, bY, btnW, btnH, '📖 食谱', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(20 + btnW * 2, bY, btnW, btnH, '📋 菜单', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(25 + btnW * 3, bY, btnW, btnH, '⬆ 升级', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
 }
 
 Renderer.prototype.drawCustomers = function (customers) {
@@ -1936,8 +1936,11 @@ Renderer.prototype.drawNightScene = function (stats, inventory, wholesaleCount) 
   // 周期倒计时
   if (stats.periodRemaining) {
     var secs = Math.ceil(stats.periodRemaining / 1000)
-    this.text('⏱ 剩余 ' + secs + '秒', w / 2, h - 12, { fontSize: 11, color: 'rgba(255,255,255,0.4)', align: 'center' })
+    this.text('☀️ 白天倒计时 ' + secs + '秒', w / 2, h - 12, { fontSize: 11, color: 'rgba(255,255,255,0.4)', align: 'center' })
   }
+
+  // 提示：查看食材
+  this.text('💡 点「开始」用食材研发新食谱', w / 2, h - 28, { fontSize: 10, color: 'rgba(255,255,255,0.3)', align: 'center' })
 }
 
 // ======== 食材选择面板 ========
@@ -2196,7 +2199,7 @@ Renderer.prototype.drawStatsScreen = function (stats, discoveredRecipes) {
   var W = this.width, H = this.height
 
   this.clear()
-  this.text('📊 经营统计', W / 2, 14, { fontSize: 18, bold: true, align: 'center' })
+  this.text('📖 食谱图鉴', W / 2, 14, { fontSize: 18, bold: true, align: 'center' })
 
   var listY = 45
   var statsData = [
@@ -2304,12 +2307,12 @@ function buildDayButtons(stats) {
 
   // 探索按钮
   btns.push({ x: 10, y: bY, w: btnW, h: btnH, action: 'startExplore' })
-  // 菜单按钮（白天打开菜单管理）
-  btns.push({ x: 15 + btnW, y: bY, w: btnW, h: btnH, action: 'menuManage' })
+  // 食谱按钮
+  btns.push({ x: 15 + btnW, y: bY, w: btnW, h: btnH, action: 'stats' })
+  // 菜单按钮
+  btns.push({ x: 20 + btnW * 2, y: bY, w: btnW, h: btnH, action: 'menuManage' })
   // 升级按钮
-  btns.push({ x: 20 + btnW * 2, y: bY, w: btnW, h: btnH, action: 'upgrade' })
-  // 统计按钮
-  btns.push({ x: 25 + btnW * 3, y: bY, w: btnW, h: btnH, action: 'stats' })
+  btns.push({ x: 25 + btnW * 3, y: bY, w: btnW, h: btnH, action: 'upgrade' })
 
   // 顾客点击
   var customers = engine.state.currentCustomers
@@ -2422,7 +2425,10 @@ function renderExploreResult() {
 
   renderer.drawExploreResult(result)
 
-  buttons = [{ x: W / 2 - 60, y: 300, w: 120, h: 38, action: 'closeDialog' }]
+  // 计算按钮位置：和 drawExploreResult 保持一致
+  var dW = 300, dH = 280
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+  buttons = [{ x: W / 2 - 60, y: dY + dH - 55, w: 120, h: 38, action: 'closeDialog' }]
 }
 
 function renderDiscoverResult() {
@@ -2431,9 +2437,10 @@ function renderDiscoverResult() {
 
   renderer.drawDiscoverResult(result)
 
-  var dW = 320
-  var dX = (W - dW) / 2
-  buttons = [{ x: dX + 20, y: 390, w: dW - 40, h: 40, action: 'closeDialog' }]
+  // 计算按钮位置：和 drawDiscoverResult 保持一致
+  var dW = 320, dH = 360
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+  buttons = [{ x: dX + 20, y: dY + dH - 55, w: dW - 40, h: 40, action: 'closeDialog' }]
 }
 
 // ======== 菜单管理界面 ========
