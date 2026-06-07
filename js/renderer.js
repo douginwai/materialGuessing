@@ -1,5 +1,5 @@
 /**
- * 狐狸的配料食堂 - Canvas渲染器
+ * 狐狸的烘焙坊 - Canvas渲染器
  * 白天场景、夜晚场景、弹窗、升级、统计
  */
 var C = require('./config.js')

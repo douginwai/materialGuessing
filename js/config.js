@@ -1,12 +1,23 @@
 /**
- * 狐狸的配料食堂 - 游戏配置
+ * 狐狸的烘焙坊 - 游戏配置
  */
 module.exports = {
-  gameName: '狐狸的配料食堂',
+  gameName: '🦊 狐狸的烘焙坊',
   version: '2.0.0',
 
   // 初始状态
-  initialGold: 100,
+  initialGold: 200,
+
+  // 开局默认仓库食材
+  initialInventory: {
+    '小麦粉': 10, '黄油': 8, '白砂糖': 10, '鸡蛋': 8,
+    '水': 5, '植物油': 5, '食用盐': 3, '酵母': 3,
+    '牛奶': 5, '淡奶油': 3, '奶油': 3, '香草精': 3,
+    '可可粉': 3, '巧克力': 2, '坚果': 2, '杏仁粉': 2,
+  },
+
+  // 开局默认发现的食谱
+  initialRecipes: ['butterCookie', 'spongeCake', 'eggTart'],
 
   // 昼夜周期（毫秒）
   dayDuration: 3 * 60 * 1000,    // 3分钟
@@ -14,20 +25,20 @@ module.exports = {
 
   // 店铺等级
   shopLevels: [
-    { level: 1, name: '路边摊', upgradeCost: 0, maxCustomers: 2, menuSlots: 3, maxInventory: 30, maxOfflineHours: 2 },
-    { level: 2, name: '小餐馆', upgradeCost: 200, maxCustomers: 3, menuSlots: 4, maxInventory: 40, maxOfflineHours: 4 },
-    { level: 3, name: '美食屋', upgradeCost: 500, maxCustomers: 4, menuSlots: 5, maxInventory: 50, maxOfflineHours: 6 },
-    { level: 4, name: '热门餐厅', upgradeCost: 1200, maxCustomers: 5, menuSlots: 6, maxInventory: 60, maxOfflineHours: 8 },
-    { level: 5, name: '米其林食堂', upgradeCost: 3000, maxCustomers: 6, menuSlots: 8, maxInventory: 80, maxOfflineHours: 12 },
+    { level: 1, name: '烘焙小摊', upgradeCost: 0, maxCustomers: 2, menuSlots: 3, maxInventory: 30, maxOfflineHours: 2 },
+    { level: 2, name: '面包小铺', upgradeCost: 200, maxCustomers: 3, menuSlots: 4, maxInventory: 40, maxOfflineHours: 4 },
+    { level: 3, name: '甜品屋', upgradeCost: 500, maxCustomers: 4, menuSlots: 5, maxInventory: 50, maxOfflineHours: 6 },
+    { level: 4, name: '人气烘焙坊', upgradeCost: 1200, maxCustomers: 5, menuSlots: 6, maxInventory: 60, maxOfflineHours: 8 },
+    { level: 5, name: '米其林甜品殿堂', upgradeCost: 3000, maxCustomers: 6, menuSlots: 8, maxInventory: 80, maxOfflineHours: 12 },
   ],
 
   // 狐狸等级
   foxLevels: [
-    { level: 1, name: '实习狐狸', icon: '🐣', serveSpeed: 1.0, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 0 },
-    { level: 2, name: '初级厨师', icon: '🦊', serveSpeed: 1.2, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 100 },
-    { level: 3, name: '熟练厨师', icon: '🥼', serveSpeed: 1.4, exploreQuality: 1.2, customerFavor: 1.1, upgradeCost: 300 },
-    { level: 4, name: '主厨狐狸', icon: '🔬', serveSpeed: 1.6, exploreQuality: 1.3, customerFavor: 1.2, upgradeCost: 800 },
-    { level: 5, name: '食神狐狸', icon: '👑', serveSpeed: 2.0, exploreQuality: 1.5, customerFavor: 1.3, upgradeCost: 2000 },
+    { level: 1, name: '实习面点狐', icon: '🐣', serveSpeed: 1.0, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 0 },
+    { level: 2, name: '初级烘焙狐', icon: '🦊', serveSpeed: 1.2, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 100 },
+    { level: 3, name: '熟练甜点师', icon: '🥼', serveSpeed: 1.4, exploreQuality: 1.2, customerFavor: 1.1, upgradeCost: 300 },
+    { level: 4, name: '金牌主厨狐', icon: '🔬', serveSpeed: 1.6, exploreQuality: 1.3, customerFavor: 1.2, upgradeCost: 800 },
+    { level: 5, name: '烘焙食神', icon: '👑', serveSpeed: 2.0, exploreQuality: 1.5, customerFavor: 1.3, upgradeCost: 2000 },
   ],
 
   // 探索配置
@@ -74,7 +85,7 @@ module.exports = {
     refreshCost: 20,    // 刷新费用
   },
 
-  // 主题色（保留原有）
+  // 主题色（烘焙暖色系）
   theme: {
     warmOrange: '#FF7A33',
     creamWhite: '#FFF8EE',

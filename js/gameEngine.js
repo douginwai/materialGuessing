@@ -1,5 +1,5 @@
 /**
- * 狐狸的配料食堂 - 游戏引擎
+ * 狐狸的烘焙坊 - 游戏引擎
  * 核心状态机：昼夜切换、存档、升级、食谱发现、顾客经营
  */
 var C = require('./config.js')
@@ -45,6 +45,22 @@ GameEngine.prototype.load = function () {
 }
 
 GameEngine.prototype.reset = function () {
+  // 初始食材
+  var initInv = {}
+  if (C.initialInventory) {
+    for (var k in C.initialInventory) {
+      initInv[k] = C.initialInventory[k]
+    }
+  }
+
+  // 初始食谱
+  var initRecipes = {}
+  if (C.initialRecipes && C.initialRecipes.length > 0) {
+    for (var i = 0; i < C.initialRecipes.length; i++) {
+      initRecipes[C.initialRecipes[i]] = { count: 1, xp: 1, lastDiscovered: Date.now() }
+    }
+  }
+
   this.state = {
     version: C.version,
     gold: C.initialGold,
@@ -59,20 +75,20 @@ GameEngine.prototype.reset = function () {
     shopLevel: 1,
     foxLevel: 1,
 
-    // 食材仓库
-    inventory: {},
+    // 食材仓库（初始自带一批烘焙基础食材）
+    inventory: initInv,
     maxInventory: C.shopLevels[0].maxInventory,
 
-    // 食谱系统
-    discoveredRecipes: {},
+    // 食谱系统（初始默认发现 3 道基础甜品）
+    discoveredRecipes: initRecipes,
 
     // 顾客
     currentCustomers: [],
     servedToday: 0,
     totalServed: 0,
 
-    // 菜单
-    menu: this._getDefaultMenu(),
+    // 菜单（初始上架默认食谱）
+    menu: C.initialRecipes ? C.initialRecipes.slice() : this._getDefaultMenu(),
     maxMenuSlots: C.shopLevels[0].menuSlots,
 
     // 探索
@@ -87,7 +103,7 @@ GameEngine.prototype.reset = function () {
     stats: {
       dayCount: 0,
       totalCustomers: 0,
-      totalRecipesDiscovered: 0,
+      totalRecipesDiscovered: C.initialRecipes ? C.initialRecipes.length : 0,
       totalExploreCount: 0,
     },
   }
@@ -443,13 +459,14 @@ GameEngine.prototype.completeExplore = function () {
 
 GameEngine.prototype._rollIngredient = function (quality) {
   // 根据探索品质随机食材
-  var allIngredients = Object.keys(RC.ingredientRarity)
+  var allIngredients = Object.keys(RC.getAllIngredients())
   if (allIngredients.length === 0) return null
 
   // 按稀有度加权: quality 越高, 稀有食材概率越大
+  var allRarity = RC.getAllIngredients()
   var weights = []
   for (var i = 0; i < allIngredients.length; i++) {
-    var rarity = RC.ingredientRarity[allIngredients[i]] || 'common'
+    var rarity = allRarity[allIngredients[i]] || 'common'
     var w = rarity === 'common' ? 50 : rarity === 'uncommon' ? 30 : 20
     w = Math.floor(w * quality)
     weights.push(w)
