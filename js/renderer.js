@@ -194,9 +194,9 @@ Renderer.prototype.drawDayScene = function (stats, customers) {
   // (在 main.js 计算后通过额外参数传入)
   if (stats.periodRemaining) {
     var secs = Math.ceil(stats.periodRemaining / 1000)
-    var min = Math.floor(secs / 60)
-    var sec = secs % 60
-    this.text('⏱ ' + min + ':' + (sec < 10 ? '0' : '') + sec, w / 2, bgY + 8, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+    if (secs > 0) {
+      this.text('🌙 夜晚研发倒计时 ' + secs + '秒', w / 2, bgY + 8, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+    }
   }
 
   // 底部按钮
@@ -205,9 +205,9 @@ Renderer.prototype.drawDayScene = function (stats, customers) {
   var btnH = 36
 
   this.drawButton(10, bY, btnW, btnH, '🔍 探索', { fontSize: 12 })
-  this.drawButton(15 + btnW, bY, btnW, btnH, '📋 菜单', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
-  this.drawButton(20 + btnW * 2, bY, btnW, btnH, '⬆ 升级', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
-  this.drawButton(25 + btnW * 3, bY, btnW, btnH, '📊 统计', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(15 + btnW, bY, btnW, btnH, '📖 食谱', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(20 + btnW * 2, bY, btnW, btnH, '📋 菜单', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(25 + btnW * 3, bY, btnW, btnH, '⬆ 升级', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
 }
 
 Renderer.prototype.drawCustomers = function (customers) {
@@ -382,8 +382,11 @@ Renderer.prototype.drawNightScene = function (stats, inventory, wholesaleCount) 
   // 周期倒计时
   if (stats.periodRemaining) {
     var secs = Math.ceil(stats.periodRemaining / 1000)
-    this.text('⏱ 剩余 ' + secs + '秒', w / 2, h - 12, { fontSize: 11, color: 'rgba(255,255,255,0.4)', align: 'center' })
+    this.text('☀️ 白天倒计时 ' + secs + '秒', w / 2, h - 12, { fontSize: 11, color: 'rgba(255,255,255,0.4)', align: 'center' })
   }
+
+  // 提示：查看食材
+  this.text('💡 点「开始」用食材研发新食谱', w / 2, h - 28, { fontSize: 10, color: 'rgba(255,255,255,0.3)', align: 'center' })
 }
 
 // ======== 食材选择面板 ========
@@ -642,7 +645,7 @@ Renderer.prototype.drawStatsScreen = function (stats, discoveredRecipes) {
   var W = this.width, H = this.height
 
   this.clear()
-  this.text('📊 经营统计', W / 2, 14, { fontSize: 18, bold: true, align: 'center' })
+  this.text('📖 食谱图鉴', W / 2, 14, { fontSize: 18, bold: true, align: 'center' })
 
   var listY = 45
   var statsData = [

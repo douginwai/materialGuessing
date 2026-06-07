@@ -19,9 +19,9 @@ module.exports = {
   // 开局默认发现的食谱
   initialRecipes: ['butterCookie', 'spongeCake', 'eggTart'],
 
-  // 昼夜周期（毫秒）
-  dayDuration: 3 * 60 * 1000,    // 3分钟
-  nightDuration: 1 * 60 * 1000,  // 1分钟
+  // 昼夜周期（毫秒）- 测试阶段缩短方便体验
+  dayDuration: 30 * 1000,    // 30秒白天（正式版 3分钟）
+  nightDuration: 15 * 1000,  // 15秒夜晚（正式版 1分钟）
 
   // 店铺等级
   shopLevels: [
@@ -43,10 +43,10 @@ module.exports = {
 
   // 探索配置
   explore: {
-    duration: 30 * 1000,  // 30秒
+    duration: 10 * 1000,  // 10秒（测试用）
     baseIngredientCount: 1,
     maxIngredientCount: 3,
-    spawnInterval: 25000,  // 顾客生成间隔（毫秒）
+    spawnInterval: 10000,  // 顾客生成间隔
   },
 
   // 出餐配置
@@ -58,10 +58,10 @@ module.exports = {
 
   // 顾客
   customer: {
-    patienceMin: 20000,  // 最小耐心 20秒
-    patienceMax: 35000,  // 最大耐心 35秒
+    patienceMin: 15000,  // 最小耐心 15秒
+    patienceMax: 25000,  // 最大耐心 25秒
     patienceTick: 500,   // 每 tick 减少量
-    generateChance: 0.02, // 每 tick 生成概率
+    generateChance: 0.05, // 每 tick 生成概率（约每 10 秒一个）
     baseTip: 1.0,
   },
 

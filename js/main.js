@@ -61,12 +61,12 @@ function buildDayButtons(stats) {
 
   // 探索按钮
   btns.push({ x: 10, y: bY, w: btnW, h: btnH, action: 'startExplore' })
-  // 菜单按钮（白天打开菜单管理）
-  btns.push({ x: 15 + btnW, y: bY, w: btnW, h: btnH, action: 'menuManage' })
+  // 食谱按钮
+  btns.push({ x: 15 + btnW, y: bY, w: btnW, h: btnH, action: 'stats' })
+  // 菜单按钮
+  btns.push({ x: 20 + btnW * 2, y: bY, w: btnW, h: btnH, action: 'menuManage' })
   // 升级按钮
-  btns.push({ x: 20 + btnW * 2, y: bY, w: btnW, h: btnH, action: 'upgrade' })
-  // 统计按钮
-  btns.push({ x: 25 + btnW * 3, y: bY, w: btnW, h: btnH, action: 'stats' })
+  btns.push({ x: 25 + btnW * 3, y: bY, w: btnW, h: btnH, action: 'upgrade' })
 
   // 顾客点击
   var customers = engine.state.currentCustomers
@@ -179,7 +179,10 @@ function renderExploreResult() {
 
   renderer.drawExploreResult(result)
 
-  buttons = [{ x: W / 2 - 60, y: 300, w: 120, h: 38, action: 'closeDialog' }]
+  // 计算按钮位置：和 drawExploreResult 保持一致
+  var dW = 300, dH = 280
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+  buttons = [{ x: W / 2 - 60, y: dY + dH - 55, w: 120, h: 38, action: 'closeDialog' }]
 }
 
 function renderDiscoverResult() {
@@ -188,9 +191,10 @@ function renderDiscoverResult() {
 
   renderer.drawDiscoverResult(result)
 
-  var dW = 320
-  var dX = (W - dW) / 2
-  buttons = [{ x: dX + 20, y: 390, w: dW - 40, h: 40, action: 'closeDialog' }]
+  // 计算按钮位置：和 drawDiscoverResult 保持一致
+  var dW = 320, dH = 360
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+  buttons = [{ x: dX + 20, y: dY + dH - 55, w: dW - 40, h: 40, action: 'closeDialog' }]
 }
 
 // ======== 菜单管理界面 ========
