@@ -1,21 +1,14 @@
 
-// ========================
-// wx API Polyfill for Web
-// ========================
 ;(function() {
   var canvas = document.getElementById('gameCanvas')
   if (!canvas) {
     canvas = document.createElement('canvas')
     canvas.id = 'gameCanvas'
-    canvas.width = 375
-    canvas.height = 667
+    canvas.width = 375; canvas.height = 667
     document.body.appendChild(canvas)
   }
-
-  // 缩放以适应屏幕
-  function resizeCanvas() {
-    var maxW = window.innerWidth
-    var maxH = window.innerHeight
+  function resize() {
+    var maxW = window.innerWidth, maxH = window.innerHeight
     var scale = Math.min(maxW / 375, maxH / 667)
     canvas.style.width = (375 * scale) + 'px'
     canvas.style.height = (667 * scale) + 'px'
@@ -25,101 +18,117 @@
     canvas.style.borderRadius = '12px'
     canvas.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)'
   }
-  resizeCanvas()
-  window.addEventListener('resize', resizeCanvas)
+  resize(); window.addEventListener('resize', resize)
 
-  // wx 全局对象
   window.wx = {
-    createCanvas: function() {
-      return canvas
-    },
-    getSystemInfoSync: function() {
-      return {
-        pixelRatio: window.devicePixelRatio || 1,
-        screenWidth: canvas.width,
-        screenHeight: canvas.height,
-        windowWidth: canvas.width,
-        windowHeight: canvas.height,
-      }
-    },
+    createCanvas: function() { return canvas },
+    getSystemInfoSync: function() { return { pixelRatio: window.devicePixelRatio||1, screenWidth: 375, screenHeight: 667 } },
+    setStorageSync: function(k,v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch(e) {} },
+    getStorageSync: function(k) { try { return JSON.parse(localStorage.getItem(k)) } catch(e) { return null } },
     onTouchStart: function(cb) {
       canvas.addEventListener('touchstart', function(e) {
-        e.preventDefault()
-        var rect = canvas.getBoundingClientRect()
-        var scaleX = canvas.width / rect.width
-        var scaleY = canvas.height / rect.height
-        var touch = e.touches[0]
-        cb({
-          touches: [{
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY,
-          }]
-        })
+        e.preventDefault(); var r = canvas.getBoundingClientRect()
+        var sx = 375/r.width, sy = 667/r.height; var t = e.touches[0]
+        cb({ touches: [{ x: (t.clientX-r.left)*sx, y: (t.clientY-r.top)*sy }] })
       }, { passive: false })
-      // Also support mouse for desktop testing
       canvas.addEventListener('mousedown', function(e) {
-        var rect = canvas.getBoundingClientRect()
-        var scaleX = canvas.width / rect.width
-        var scaleY = canvas.height / rect.height
-        window._touchData = {
-          x: (e.clientX - rect.left) * scaleX,
-          y: (e.clientY - rect.top) * scaleY,
-        }
+        var r = canvas.getBoundingClientRect()
+        var sx = 375/r.width, sy = 667/r.height
+        window._touchD = { x: (e.clientX-r.left)*sx, y: (e.clientY-r.top)*sy }
       })
     },
     onTouchEnd: function(cb) {
       canvas.addEventListener('touchend', function(e) {
-        e.preventDefault()
-        var rect = canvas.getBoundingClientRect()
-        var scaleX = canvas.width / rect.width
-        var scaleY = canvas.height / rect.height
-        var touch = e.changedTouches[0]
-        cb({
-          changedTouches: [{
-            x: (touch.clientX - rect.left) * scaleX,
-            y: (touch.clientY - rect.top) * scaleY,
-          }]
-        })
+        e.preventDefault(); var r = canvas.getBoundingClientRect()
+        var sx = 375/r.width, sy = 667/r.height; var t = e.changedTouches[0]
+        cb({ changedTouches: [{ x: (t.clientX-r.left)*sx, y: (t.clientY-r.top)*sy }] })
       }, { passive: false })
       canvas.addEventListener('mouseup', function(e) {
-        var rect = canvas.getBoundingClientRect()
-        var scaleX = canvas.width / rect.width
-        var scaleY = canvas.height / rect.height
-        if (window._touchData) {
-          cb({
-            changedTouches: [{
-              x: (e.clientX - rect.left) * scaleX,
-              y: (e.clientY - rect.top) * scaleY,
-            }]
-          })
-          window._touchData = null
-        }
+        var r = canvas.getBoundingClientRect(); var sx = 375/r.width, sy = 667/r.height
+        if (window._touchD) { cb({ changedTouches: [{ x: (e.clientX-r.left)*sx, y: (e.clientY-r.top)*sy }] }); window._touchD = null }
       })
     },
   }
 })();
 
-
 // ====== config.js ======
 /**
- * 游戏全局配置
+ * 狐狸的配料食堂 - 游戏配置
  */
 window.GameConfig = {
-  gameName: '配料猜猜猜',
-  version: '1.0.0',
+  gameName: '狐狸的配料食堂',
+  version: '2.0.0',
 
-  quiz: {
-    questionsPerRound: 10,
-    timePerQuestion: 15,
-    speedBonusThreshold1: 5,
-    speedBonusThreshold2: 10,
-    baseScore: 10,
-    speedBonus1: 5,
-    speedBonus2: 2,
-    maxComboBonus: 5,
-    maxLives: 3,
+  // 初始状态
+  initialGold: 100,
+
+  // 昼夜周期（毫秒）
+  dayDuration: 3 * 60 * 1000,    // 3分钟
+  nightDuration: 1 * 60 * 1000,  // 1分钟
+
+  // 店铺等级
+  shopLevels: [
+    { level: 1, name: '路边摊', upgradeCost: 0, maxCustomers: 2, menuSlots: 3, maxInventory: 30, maxOfflineHours: 2 },
+    { level: 2, name: '小餐馆', upgradeCost: 200, maxCustomers: 3, menuSlots: 4, maxInventory: 40, maxOfflineHours: 4 },
+    { level: 3, name: '美食屋', upgradeCost: 500, maxCustomers: 4, menuSlots: 5, maxInventory: 50, maxOfflineHours: 6 },
+    { level: 4, name: '热门餐厅', upgradeCost: 1200, maxCustomers: 5, menuSlots: 6, maxInventory: 60, maxOfflineHours: 8 },
+    { level: 5, name: '米其林食堂', upgradeCost: 3000, maxCustomers: 6, menuSlots: 8, maxInventory: 80, maxOfflineHours: 12 },
+  ],
+
+  // 狐狸等级
+  foxLevels: [
+    { level: 1, name: '实习狐狸', icon: '🐣', serveSpeed: 1.0, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 0 },
+    { level: 2, name: '初级厨师', icon: '🦊', serveSpeed: 1.2, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 100 },
+    { level: 3, name: '熟练厨师', icon: '🥼', serveSpeed: 1.4, exploreQuality: 1.2, customerFavor: 1.1, upgradeCost: 300 },
+    { level: 4, name: '主厨狐狸', icon: '🔬', serveSpeed: 1.6, exploreQuality: 1.3, customerFavor: 1.2, upgradeCost: 800 },
+    { level: 5, name: '食神狐狸', icon: '👑', serveSpeed: 2.0, exploreQuality: 1.5, customerFavor: 1.3, upgradeCost: 2000 },
+  ],
+
+  // 探索配置
+  explore: {
+    duration: 30 * 1000,  // 30秒
+    baseIngredientCount: 1,
+    maxIngredientCount: 3,
+    spawnInterval: 25000,  // 顾客生成间隔（毫秒）
   },
 
+  // 出餐配置
+  serving: {
+    baseTime: 5000,      // 基础制作时间 5秒
+    eatTime: 3000,       // 顾客吃的时间 3秒
+    settleDelay: 1000,   // 完成后延迟离开
+  },
+
+  // 顾客
+  customer: {
+    patienceMin: 20000,  // 最小耐心 20秒
+    patienceMax: 35000,  // 最大耐心 35秒
+    patienceTick: 500,   // 每 tick 减少量
+    generateChance: 0.02, // 每 tick 生成概率
+    baseTip: 1.0,
+  },
+
+  // 离线收益配置
+  offline: {
+    baseGoldPerMin: 10,
+    goldPerLevel: 5,
+  },
+
+  // 食谱价格公式
+  pricing: {
+    basePerStar: 8,
+    baseOffset: 5,
+    masteryBonus: 0.05,  // 每级熟练度+5%
+  },
+
+  // 批发商
+  wholesale: {
+    basePrice: 3,       // 基础单价
+    refreshCount: 5,    // 每次刷新5种
+    refreshCost: 20,    // 刷新费用
+  },
+
+  // 主题色（保留原有）
   theme: {
     warmOrange: '#FF7A33',
     creamWhite: '#FFF8EE',
@@ -129,17 +138,12 @@ window.GameConfig = {
     darkText: '#3D3226',
     lightText: '#8B7E6F',
     cardBg: '#FFFFFF',
+    labBlue: '#4FC3F7',
+    tooltipBg: '#333333',
+    nightBg: '#1a1a2e',
+    nightCard: '#16213e',
+    starGold: '#FFD700',
   },
-
-  categories: [
-    { id: 'beverage', name: '饮料区', icon: '🥤', difficulty: 1 },
-    { id: 'snack', name: '零食区', icon: '🍪', difficulty: 2 },
-    { id: 'instant', name: '速食区', icon: '🍜', difficulty: 2 },
-    { id: 'condiment', name: '调味区', icon: '🧂', difficulty: 3 },
-    { id: 'icecream', name: '冰淇淋区', icon: '🧊', difficulty: 1 },
-    { id: 'bakery', name: '烘焙区', icon: '🍞', difficulty: 2 },
-    { id: 'canned', name: '罐头区', icon: '🥫', difficulty: 3 },
-  ],
 }
 
 
@@ -514,119 +518,931 @@ window.QuestionBank = [
 ]
 
 
+// ====== recipeChain.js ======
+/**
+ * 狐狸的配料食堂 - 食谱链数据
+ * 每个食谱通过 chain.parent + chain.added 关联形成衍生关系
+ */
+window.RecipeChain = {
+  // ======== 食谱列表 ========
+  recipes: [
+    // ===== 链1: 牛角包家族 =====
+    {
+      id: 'croissant', name: '牛角包', icon: '🥐', starRating: 2,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '酵母'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      sourceQuestionId: 'bakery_002',
+      price: 21,
+    },
+    {
+      id: 'creamCroissant', name: '奶油牛角包', icon: '🥐', starRating: 3,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '酵母', '淡奶油'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'croissant', added: '淡奶油', depth: 1 },
+      price: 29,
+    },
+    {
+      id: 'cheeseLavaCroissant', name: '芝士熔岩牛角包', icon: '🧀', starRating: 4,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '酵母', '淡奶油', '马苏里拉芝士', '芝士片'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'creamCroissant', added: ['马苏里拉芝士', '芝士片'], depth: 2 },
+      price: 37,
+    },
+
+    // ===== 链2: 薯片家族 =====
+    {
+      id: 'plainChips', name: '原味薯片', icon: '🥔', starRating: 2,
+      ingredients: ['马铃薯', '植物油', '食用盐'],
+      category: 'snack',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      sourceQuestionId: 'snack_001',
+      price: 21,
+    },
+    {
+      id: 'tomatoChips', name: '番茄味薯片', icon: '🍅', starRating: 3,
+      ingredients: ['马铃薯', '植物油', '食用盐', '番茄', '白砂糖'],
+      category: 'snack',
+      chain: { isBase: false, parent: 'plainChips', added: ['番茄', '白砂糖'], depth: 1 },
+      price: 29,
+    },
+    {
+      id: 'truffleChips', name: '黑松露薯片', icon: '🍄', starRating: 4,
+      ingredients: ['马铃薯', '植物油', '食用盐', '黑松露', '橄榄油'],
+      category: 'snack',
+      chain: { isBase: false, parent: 'plainChips', added: ['黑松露', '橄榄油'], depth: 1 },
+      price: 37,
+    },
+
+    // ===== 链3: 巧克力家族 =====
+    {
+      id: 'pureChocolate', name: '纯巧克力', icon: '🍫', starRating: 2,
+      ingredients: ['可可粉', '可可脂', '白砂糖'],
+      category: 'snack',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      sourceQuestionId: 'snack_004',
+      price: 21,
+    },
+    {
+      id: 'nutChocolate', name: '坚果巧克力', icon: '🌰', starRating: 3,
+      ingredients: ['可可粉', '可可脂', '白砂糖', '坚果'],
+      category: 'snack',
+      chain: { isBase: false, parent: 'pureChocolate', added: '坚果', depth: 1 },
+      price: 29,
+    },
+    {
+      id: 'liquorChocolate', name: '酒心巧克力', icon: '🍷', starRating: 4,
+      ingredients: ['可可粉', '可可脂', '白砂糖', '淡奶油', '朗姆酒'],
+      category: 'snack',
+      chain: { isBase: false, parent: 'pureChocolate', added: ['淡奶油', '朗姆酒'], depth: 1 },
+      price: 37,
+    },
+
+    // ===== 额外独立食谱（不参与链衍生，仅用于菜单多样性）=====
+    {
+      id: 'spongeCake', name: '海绵蛋糕', icon: '🎂', starRating: 2,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '植物油', '水'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      sourceQuestionId: 'bakery_003',
+      price: 21,
+    },
+    {
+      id: 'iceCream', name: '冰淇淋', icon: '🍦', starRating: 2,
+      ingredients: ['水', '白砂糖', '乳粉', '奶油', '蛋黄'],
+      category: 'icecream',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      sourceQuestionId: 'icecream_003',
+      price: 21,
+    },
+  ],
+
+  // ======== 食材稀有度 ========
+  // 用于探索概率和食谱价值计算
+  ingredientRarity: {
+    '小麦粉': 'common',
+    '黄油': 'common',
+    '白砂糖': 'common',
+    '鸡蛋': 'common',
+    '酵母': 'common',
+    '水': 'common',
+    '植物油': 'common',
+    '食用盐': 'common',
+    '马铃薯': 'common',
+    '可可粉': 'common',
+    '可可脂': 'common',
+    '乳粉': 'common',
+    '奶油': 'common',
+    '蛋黄': 'common',
+    '番茄': 'uncommon',
+    '淡奶油': 'uncommon',
+    '橄榄油': 'uncommon',
+    '坚果': 'uncommon',
+    '芝士片': 'uncommon',
+    '黑松露': 'rare',
+    '马苏里拉芝士': 'rare',
+    '朗姆酒': 'rare',
+  },
+
+  // ======== 辅助函数 ========
+
+  /** 通过 ID 获取食谱 */
+  getRecipeById: function (id) {
+    for (var i = 0; i < this.recipes.length; i++) {
+      if (this.recipes[i].id === id) return this.recipes[i]
+    }
+    return null
+  },
+
+  /** 构建运行时 children 索引 */
+  buildChainIndex: function () {
+    var index = {}
+    for (var i = 0; i < this.recipes.length; i++) {
+      var r = this.recipes[i]
+      if (r.chain.parent) {
+        if (!index[r.chain.parent]) index[r.chain.parent] = []
+        index[r.chain.parent].push(r.id)
+      }
+    }
+    return index
+  },
+
+  /** 获取食谱链上的所有父级（从基础到当前） */
+  getChainPath: function (recipeId) {
+    var path = []
+    var current = this.getRecipeById(recipeId)
+    while (current) {
+      path.unshift(current.id)
+      if (current.chain.parent) {
+        current = this.getRecipeById(current.chain.parent)
+      } else {
+        current = null
+      }
+    }
+    return path
+  },
+
+  /** 检查 ingredientSet 是否是 recipe.ingredients 的超集 */
+  isSuperset: function (ingredientSet, recipeIngredients) {
+    for (var i = 0; i < recipeIngredients.length; i++) {
+      if (ingredientSet.indexOf(recipeIngredients[i]) === -1) return false
+    }
+    return true
+  },
+
+  /** 检查两组食材是否完全一致（无序） */
+  arraysEqual: function (a, b) {
+    if (!a || !b) return false
+    if (a.length !== b.length) return false
+    var sortedA = a.slice().sort()
+    var sortedB = b.slice().sort()
+    for (var i = 0; i < sortedA.length; i++) {
+      if (sortedA[i] !== sortedB[i]) return false
+    }
+    return true
+  },
+
+  /** 获取食材稀有度分数（用于匹配优先级） */
+  getIngredientScore: function (name) {
+    var rarity = this.ingredientRarity[name] || 'common'
+    var scores = { common: 1, uncommon: 2, rare: 3 }
+    return scores[rarity] || 1
+  },
+
+  /** 计算一组食材的组合分数（稀有食材越多分越高） */
+  calculateComboValue: function (ingredients) {
+    var totalScore = 0
+    for (var i = 0; i < ingredients.length; i++) {
+      totalScore += this.getIngredientScore(ingredients[i])
+    }
+    return { score: totalScore, xp: Math.max(1, Math.floor(totalScore / 2)) }
+  },
+}
+
+
 // ====== gameEngine.js ======
 /**
- * 游戏引擎 - 核心逻辑
+ * 狐狸的配料食堂 - 游戏引擎
+ * 核心状态机：昼夜切换、存档、升级、食谱发现、顾客经营
  */
 var C = window.GameConfig
 var QB = window.QuestionBank
+var RC = window.RecipeChain
 
 function GameEngine() {
-  this.reset()
+  this.state = null
+  this.chainIndex = null
+  this.load()
+}
+
+// ======== 存档 ========
+
+GameEngine.prototype.save = function () {
+  try {
+    wx.setStorageSync('foxLab_save', this.state)
+  } catch (e) {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('foxLab_save', JSON.stringify(this.state))
+    }
+  }
+}
+
+GameEngine.prototype.load = function () {
+  var saved = null
+  try {
+    saved = wx.getStorageSync('foxLab_save')
+  } catch (e) {
+    try {
+      var raw = localStorage.getItem('foxLab_save')
+      if (raw) saved = JSON.parse(raw)
+    } catch (e2) {}
+  }
+
+  if (saved && saved.version === C.version) {
+    this.state = saved
+  } else {
+    this.reset()
+  }
+  // 构建链索引
+  this.chainIndex = RC.buildChainIndex()
 }
 
 GameEngine.prototype.reset = function () {
-  this.lives = C.quiz.maxLives
-  this.score = 0
-  this.combo = 0
-  this.roundIndex = 0
-  this.roundQuestions = []
-  this.answeredCorrectly = 0
-  this.answers = []
-  this.gameOver = false
-  this.roundComplete = false
-}
+  this.state = {
+    version: C.version,
+    gold: C.initialGold,
+    totalEarned: 0,
 
-/** 开始一轮游戏 */
-GameEngine.prototype.startRound = function (categoryId) {
-  this.reset()
-  var pool = categoryId
-    ? QB.filter(function (q) { return q.category === categoryId })
-    : QB
+    // 时间
+    currentPeriod: 'day',
+    periodStartTime: Date.now(),
+    lastActive: Date.now(),
 
-  var shuffled = pool.slice().sort(function () { return Math.random() - 0.5 })
-  this.roundQuestions = shuffled.slice(0, C.quiz.questionsPerRound)
-  return this.roundQuestions
-}
+    // 等级
+    shopLevel: 1,
+    foxLevel: 1,
 
-/** 当前题目 */
-GameEngine.prototype.getCurrentQuestion = function () {
-  if (this.roundIndex >= this.roundQuestions.length) {
-    this.roundComplete = true
-    return null
+    // 食材仓库
+    inventory: {},
+    maxInventory: C.shopLevels[0].maxInventory,
+
+    // 食谱系统
+    discoveredRecipes: {},
+
+    // 顾客
+    currentCustomers: [],
+    servedToday: 0,
+    totalServed: 0,
+
+    // 菜单
+    menu: this._getDefaultMenu(),
+    maxMenuSlots: C.shopLevels[0].menuSlots,
+
+    // 探索
+    isExploring: false,
+    exploreStartTime: 0,
+    exploreResult: null,
+
+    // 批发商
+    wholesaleItems: [],
+
+    // 统计
+    stats: {
+      dayCount: 0,
+      totalCustomers: 0,
+      totalRecipesDiscovered: 0,
+      totalExploreCount: 0,
+    },
   }
-  return this.roundQuestions[this.roundIndex]
+  this.save()
 }
 
-/** 提交答案 */
-GameEngine.prototype.submitAnswer = function (selectedIndex, timeUsed) {
-  var q = this.getCurrentQuestion()
-  if (!q) return null
+GameEngine.prototype._getDefaultMenu = function () {
+  // 初始菜单：从基础食谱里选 3 个
+  var bases = []
+  for (var i = 0; i < RC.recipes.length; i++) {
+    if (RC.recipes[i].chain.isBase) bases.push(RC.recipes[i].id)
+  }
+  return bases.slice(0, 3)
+}
 
-  var isCorrect = selectedIndex === q.answer
-  var points = 0
+// ======== 店铺系统 ========
 
-  if (isCorrect) {
-    this.combo++
-    this.answeredCorrectly++
-    points = C.quiz.baseScore
+GameEngine.prototype.getShopInfo = function () {
+  var current = C.shopLevels[this.state.shopLevel - 1] || C.shopLevels[0]
+  var next = C.shopLevels[this.state.shopLevel] || null
+  return {
+    level: this.state.shopLevel,
+    maxLevel: C.shopLevels.length,
+    current: current,
+    next: next,
+    isMax: this.state.shopLevel >= C.shopLevels.length,
+  }
+}
 
-    if (timeUsed <= C.quiz.speedBonusThreshold1) points += C.quiz.speedBonus1
-    else if (timeUsed <= C.quiz.speedBonusThreshold2) points += C.quiz.speedBonus2
+GameEngine.prototype.canUpgradeShop = function () {
+  var info = this.getShopInfo()
+  if (info.isMax) return false
+  return this.state.gold >= info.next.upgradeCost
+}
 
-    points += Math.min(this.combo - 1, C.quiz.maxComboBonus)
-    this.score += points
-  } else {
-    this.combo = 0
-    this.lives--
-    if (this.lives <= 0) this.gameOver = true
+GameEngine.prototype.upgradeShop = function () {
+  var info = this.getShopInfo()
+  if (info.isMax) return { success: false, msg: '已达最高等级' }
+  if (this.state.gold < info.next.upgradeCost) return { success: false, msg: '金币不足' }
+
+  this.state.gold -= info.next.upgradeCost
+  this.state.shopLevel++
+  var newInfo = C.shopLevels[this.state.shopLevel - 1]
+  this.state.maxMenuSlots = newInfo.menuSlots
+  this.state.maxInventory = newInfo.maxInventory
+
+  this.save()
+  return { success: true, newLevel: this.state.shopLevel }
+}
+
+// ======== 狐狸系统 ========
+
+GameEngine.prototype.getFoxInfo = function () {
+  var current = C.foxLevels[this.state.foxLevel - 1] || C.foxLevels[0]
+  var next = C.foxLevels[this.state.foxLevel] || null
+  return {
+    level: this.state.foxLevel,
+    maxLevel: C.foxLevels.length,
+    current: current,
+    next: next,
+    isMax: this.state.foxLevel >= C.foxLevels.length,
+  }
+}
+
+GameEngine.prototype.canUpgradeFox = function () {
+  var info = this.getFoxInfo()
+  if (info.isMax) return false
+  return this.state.gold >= info.next.upgradeCost
+}
+
+GameEngine.prototype.upgradeFox = function () {
+  var info = this.getFoxInfo()
+  if (info.isMax) return { success: false, msg: '已达最高等级' }
+  if (this.state.gold < info.next.upgradeCost) return { success: false, msg: '金币不足' }
+
+  this.state.gold -= info.next.upgradeCost
+  this.state.foxLevel++
+  this.save()
+  return { success: true, newLevel: this.state.foxLevel }
+}
+
+// ======== 食材仓库 ========
+
+GameEngine.prototype.getInventory = function () {
+  return this.state.inventory
+}
+
+GameEngine.prototype.getInventoryTotal = function () {
+  var total = 0
+  for (var key in this.state.inventory) {
+    total += this.state.inventory[key]
+  }
+  return total
+}
+
+GameEngine.prototype.addIngredient = function (name, qty) {
+  var current = this.state.inventory[name] || 0
+  var maxCap = this.state.maxInventory
+  // 检查是否超上限
+  var total = this.getInventoryTotal()
+  var canAdd = Math.min(qty, maxCap - total)
+  if (canAdd <= 0) return 0
+  this.state.inventory[name] = current + canAdd
+  this.save()
+  return canAdd
+}
+
+GameEngine.prototype.removeIngredient = function (name, qty) {
+  var current = this.state.inventory[name] || 0
+  if (current < qty) return false
+  this.state.inventory[name] = current - qty
+  if (this.state.inventory[name] <= 0) delete this.state.inventory[name]
+  this.save()
+  return true
+}
+
+GameEngine.prototype.hasIngredients = function (names, qty) {
+  for (var i = 0; i < names.length; i++) {
+    if ((this.state.inventory[names[i]] || 0) < qty) return false
+  }
+  return true
+}
+
+// ======== 菜单系统 ========
+
+GameEngine.prototype.getMenu = function () {
+  return this.state.menu
+}
+
+GameEngine.prototype.setMenu = function (newMenu) {
+  if (newMenu.length > this.state.maxMenuSlots) return false
+  this.state.menu = newMenu.slice()
+  this.save()
+  return true
+}
+
+GameEngine.prototype.addToMenu = function (recipeId) {
+  if (this.state.menu.length >= this.state.maxMenuSlots) return false
+  if (this.state.menu.indexOf(recipeId) !== -1) return false
+  this.state.menu.push(recipeId)
+  this.save()
+  return true
+}
+
+GameEngine.prototype.removeFromMenu = function (recipeId) {
+  var idx = this.state.menu.indexOf(recipeId)
+  if (idx === -1) return false
+  this.state.menu.splice(idx, 1)
+  this.save()
+  return true
+}
+
+// ======== 昼夜切换 ========
+
+GameEngine.prototype.switchToNight = function () {
+  // 清理白天残留：未完成服务的顾客离开
+  var customers = this.state.currentCustomers
+  for (var i = customers.length - 1; i >= 0; i--) {
+    customers.splice(i, 1)
   }
 
-  this.answers.push({ isCorrect: isCorrect, timeUsed: timeUsed, points: points })
-  this.roundIndex++
+  // 召回探索中的狐狸
+  if (this.state.isExploring) {
+    this.state.isExploring = false
+  }
+
+  this.state.currentPeriod = 'night'
+  this.state.periodStartTime = Date.now()
+  this.save()
+}
+
+GameEngine.prototype.switchToDay = function () {
+  this.state.currentPeriod = 'day'
+  this.state.periodStartTime = Date.now()
+  this.state.servedToday = 0
+  this.state.stats.dayCount++
+  this.state.currentCustomers = []
+  this.save()
+}
+
+// ======== 顾客系统 ========
+
+GameEngine.prototype.getMaxCustomers = function () {
+  var info = C.shopLevels[this.state.shopLevel - 1] || C.shopLevels[0]
+  return info.maxCustomers
+}
+
+GameEngine.prototype.generateCustomer = function () {
+  var patience = C.customer.patienceMin + Math.random() * (C.customer.patienceMax - C.customer.patienceMin)
+  var orderItem = null
+  var menu = this.state.menu
+  if (menu.length > 0) {
+    // 优先选玩家已发现的食谱，但也会选菜单上未发现的
+    var discovered = []
+    var undiscovered = []
+    for (var i = 0; i < menu.length; i++) {
+      if (this.state.discoveredRecipes[menu[i]]) {
+        discovered.push(menu[i])
+      } else {
+        undiscovered.push(menu[i])
+      }
+    }
+    var pool = discovered.length > 0 ? discovered : undiscovered
+    orderItem = pool[Math.floor(Math.random() * pool.length)]
+  }
 
   return {
-    isCorrect: isCorrect, points: points, combo: this.combo,
-    lives: this.lives, correctIndex: q.answer,
-    foxComment: q.foxComment, knowledge: q.knowledge,
-    gameOver: this.gameOver,
+    id: '_c' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    patience: patience,
+    patienceMax: patience,
+    state: 'waiting',
+    orderItem: orderItem,
+    enterTime: Date.now(),
+    serveCompleteTime: 0,
+    eatCompleteTime: 0,
+    leaveTime: 0,
   }
 }
 
-/** 跳过 */
-GameEngine.prototype.skipQuestion = function () {
-  this.combo = 0
-  var q = this.getCurrentQuestion()
-  if (!q) return null
+GameEngine.prototype.updateCustomer = function (c) {
+  var now = Date.now()
 
-  this.answers.push({ isCorrect: false, timeUsed: 15, points: 0 })
-  this.roundIndex++
+  switch (c.state) {
+    case 'waiting':
+      c.patience -= C.customer.patienceTick
+      if (c.patience <= 0) {
+        c.state = 'leaving'
+        c.leaveTime = now + C.serving.settleDelay
+      }
+      break
 
-  return {
-    isCorrect: false, points: 0, combo: 0, lives: this.lives,
-    correctIndex: q.answer,
-    foxComment: '这题太难了？我允许你战略性撤退。',
-    knowledge: q.knowledge, skipped: true,
+    case 'serving':
+      if (now >= c.serveCompleteTime) {
+        c.state = 'eating'
+        c.eatCompleteTime = now + C.serving.eatTime
+      }
+      break
+
+    case 'eating':
+      if (now >= c.eatCompleteTime) {
+        c.state = 'done'
+        this.settleCustomer(c)
+        c.leaveTime = now + C.serving.settleDelay
+      }
+      break
+
+    case 'done':
+      if (now >= c.leaveTime) {
+        this.removeCustomer(c.id)
+      }
+      break
   }
 }
 
-/** 最终评级 */
-GameEngine.prototype.getFinalGrade = function () {
-  var ratio = this.answeredCorrectly / this.roundQuestions.length
-  if (ratio >= 0.9) return { grade: 'S', label: '配料大师', icon: '👑', color: '#FFD700' }
-  if (ratio >= 0.7) return { grade: 'A', label: '美食侦探', icon: '🔍', color: '#4CAF50' }
-  if (ratio >= 0.5) return { grade: 'B', label: '好奇食客', icon: '🍽️', color: '#2196F3' }
-  if (ratio >= 0.3) return { grade: 'C', label: '迷糊吃货', icon: '😋', color: '#FF9800' }
-  return { grade: 'D', label: '出厂设置', icon: '🍼', color: '#9E9E9E' }
+GameEngine.prototype.settleCustomer = function (c) {
+  var recipe = RC.getRecipeById(c.orderItem)
+  if (!recipe) return
+
+  var basePrice = recipe.starRating * C.pricing.basePerStar + C.pricing.baseOffset
+  var foxInfo = this.getFoxInfo()
+  var favorBonus = foxInfo.current.customerFavor
+
+  // 熟练度加成
+  var masteryInfo = this.state.discoveredRecipes[c.orderItem]
+  var masteryBonus = 1
+  if (masteryInfo) {
+    masteryBonus = 1 + masteryInfo.xp * C.pricing.masteryBonus
+  }
+
+  var finalPrice = Math.floor(basePrice * favorBonus * masteryBonus)
+  this.state.gold += finalPrice
+  this.state.totalEarned += finalPrice
+  this.state.servedToday++
+  this.state.stats.totalCustomers++
+  this.state.totalServed++
+
+  this.save()
+  return { price: finalPrice, recipe: recipe }
 }
 
-/** 各分类题量统计 */
-GameEngine.getQuestionStats = function () {
-  var stats = {}
-  C.categories.forEach(function (cat) {
-    stats[cat.id] = QB.filter(function (q) { return q.category === cat.id }).length
+GameEngine.prototype.findCustomer = function (id) {
+  for (var i = 0; i < this.state.currentCustomers.length; i++) {
+    if (this.state.currentCustomers[i].id === id) return this.state.currentCustomers[i]
+  }
+  return null
+}
+
+GameEngine.prototype.removeCustomer = function (id) {
+  for (var i = 0; i < this.state.currentCustomers.length; i++) {
+    if (this.state.currentCustomers[i].id === id) {
+      this.state.currentCustomers.splice(i, 1)
+      return true
+    }
+  }
+  return false
+}
+
+GameEngine.prototype.startServing = function (customerId, recipeId) {
+  var c = this.findCustomer(customerId)
+  if (!c) return { success: false, msg: '顾客不存在' }
+  if (c.state !== 'waiting') return { success: false, msg: '顾客状态不对' }
+
+  // 检查是否有这个食谱
+  if (!this.state.discoveredRecipes[recipeId]) {
+    return { success: false, msg: '你还不会做这个食谱' }
+  }
+
+  var foxInfo = this.getFoxInfo()
+  var serveTime = C.serving.baseTime / foxInfo.current.serveSpeed
+
+  c.state = 'serving'
+  c.serveCompleteTime = Date.now() + serveTime
+  c.orderItem = recipeId  // 确保顾客要的就是这个
+  this.save()
+  return { success: true, serveTime: serveTime }
+}
+
+// ======== 探索系统 ========
+
+GameEngine.prototype.startExplore = function () {
+  if (this.state.isExploring) return { success: false, msg: '狐狸正在探索中' }
+  this.state.isExploring = true
+  this.state.exploreStartTime = Date.now()
+  this.save()
+  return { success: true, duration: C.explore.duration }
+}
+
+GameEngine.prototype.completeExplore = function () {
+  if (!this.state.isExploring) return null
+
+  var foxInfo = this.getFoxInfo()
+  var quality = foxInfo.current.exploreQuality
+
+  // 随机 1~3 种食材
+  var count = C.explore.baseIngredientCount + Math.floor(Math.random() * (C.explore.maxIngredientCount))
+  count = Math.min(count, C.explore.maxIngredientCount)
+
+  var results = []
+  for (var i = 0; i < count; i++) {
+    var ingredient = this._rollIngredient(quality)
+    if (!ingredient) continue
+    var qty = 1 + Math.floor(Math.random() * 3) // 1~3份
+    results.push({ name: ingredient, quantity: qty })
+    this.addIngredient(ingredient, qty)
+  }
+
+  this.state.isExploring = false
+  this.state.exploreResult = { ingredients: results, timestamp: Date.now() }
+  this.state.stats.totalExploreCount++
+  this.save()
+  return this.state.exploreResult
+}
+
+GameEngine.prototype._rollIngredient = function (quality) {
+  // 根据探索品质随机食材
+  var allIngredients = Object.keys(RC.ingredientRarity)
+  if (allIngredients.length === 0) return null
+
+  // 按稀有度加权: quality 越高, 稀有食材概率越大
+  var weights = []
+  for (var i = 0; i < allIngredients.length; i++) {
+    var rarity = RC.ingredientRarity[allIngredients[i]] || 'common'
+    var w = rarity === 'common' ? 50 : rarity === 'uncommon' ? 30 : 20
+    w = Math.floor(w * quality)
+    weights.push(w)
+  }
+  var totalWeight = 0
+  for (var i = 0; i < weights.length; i++) totalWeight += weights[i]
+  if (totalWeight <= 0) return allIngredients[Math.floor(Math.random() * allIngredients.length)]
+
+  var r = Math.random() * totalWeight
+  for (var i = 0; i < allIngredients.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return allIngredients[i]
+  }
+  return allIngredients[allIngredients.length - 1]
+}
+
+// ======== 食谱发现系统 ========
+
+GameEngine.prototype.attemptDiscover = function (ingredientCombination) {
+  // ingredientCombination: 玩家选择的食材名称数组 (2-5 种)
+
+  // Step 1: 检查个数
+  if (ingredientCombination.length < 2 || ingredientCombination.length > 5) {
+    return { success: false, msg: '请选择 2-5 种食材' }
+  }
+
+  // Step 2: 双倍消耗检查
+  if (!this.hasIngredients(ingredientCombination, 2)) {
+    return { success: false, msg: '食材不足（需要双倍消耗）' }
+  }
+
+  // 扣食材
+  for (var i = 0; i < ingredientCombination.length; i++) {
+    this.removeIngredient(ingredientCombination[i], 2)
+  }
+
+  // Step 3: 计算组合价值
+  var comboValue = RC.calculateComboValue(ingredientCombination)
+
+  // Step 4: 链匹配优先
+  var knownIds = Object.keys(this.state.discoveredRecipes)
+  for (var k = 0; k < knownIds.length; k++) {
+    var knownRecipe = RC.getRecipeById(knownIds[k])
+    if (!knownRecipe) continue
+
+    // 检查食材组合是否是已知食谱 + 额外食材
+    var added = this._getAddedIngredients(ingredientCombination, knownRecipe.ingredients)
+    if (added && added.length >= 1 && added.length <= 2) {
+      // 检查是否有子食谱匹配
+      var children = this.chainIndex[knownRecipe.id]
+      if (children) {
+        for (var c = 0; c < children.length; c++) {
+          var childRecipe = RC.getRecipeById(children[c])
+          if (!childRecipe) continue
+          var childAdded = childRecipe.chain.added
+          // childAdded 可能是字符串或数组
+          var childAddedArr = typeof childAdded === 'string' ? [childAdded] : childAdded
+          if (RC.arraysEqual(added, childAddedArr)) {
+            // 链匹配成功
+            if (!this.state.discoveredRecipes[childRecipe.id]) {
+              // 发现新食谱！
+              this.state.discoveredRecipes[childRecipe.id] = { count: 1, xp: 0, lastDiscovered: Date.now() }
+              this.state.stats.totalRecipesDiscovered++
+              this.save()
+              return { success: true, result: 'discover', recipe: childRecipe, isNew: true }
+            } else {
+              // 已有，加熟练度
+              this.state.discoveredRecipes[childRecipe.id].xp += comboValue.xp
+              this.state.discoveredRecipes[childRecipe.id].count++
+              this.save()
+              return { success: true, result: 'mastery', recipe: childRecipe, isNew: false, xpGained: comboValue.xp }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Step 5: 全局匹配（按星级从高到低）
+  var sortedRecipes = RC.recipes.slice().sort(function (a, b) {
+    return b.starRating - a.starRating
   })
-  return stats
+  for (var r = 0; r < sortedRecipes.length; r++) {
+    var recipe = sortedRecipes[r]
+    if (RC.isSuperset(ingredientCombination, recipe.ingredients)) {
+      if (!this.state.discoveredRecipes[recipe.id]) {
+        // 发现新食谱！
+        this.state.discoveredRecipes[recipe.id] = { count: 1, xp: 0, lastDiscovered: Date.now() }
+        this.state.stats.totalRecipesDiscovered++
+        this.save()
+        return { success: true, result: 'discover', recipe: recipe, isNew: true }
+      } else {
+        // 已有
+        this.state.discoveredRecipes[recipe.id].xp += comboValue.xp
+        this.state.discoveredRecipes[recipe.id].count++
+        this.save()
+        return { success: true, result: 'mastery', recipe: recipe, isNew: false, xpGained: comboValue.xp }
+      }
+    }
+  }
+
+  // Step 6: 什么都没匹配到，返还一半食材
+  for (var j = 0; j < ingredientCombination.length; j++) {
+    this.addIngredient(ingredientCombination[j], 1)
+  }
+  this.save()
+  return { success: true, result: 'nothing', msg: '这组合做不出什么...返还了一半食材', comboValue: comboValue }
+}
+
+GameEngine.prototype._getAddedIngredients = function (fullCombo, baseIngredients) {
+  // 返回 fullCombo 中比 baseIngredients 多出来的食材
+  var added = []
+  for (var i = 0; i < fullCombo.length; i++) {
+    var ing = fullCombo[i]
+    // 检查在 base 中的出现次数
+    var inBase = 0
+    for (var j = 0; j < baseIngredients.length; j++) {
+      if (baseIngredients[j] === ing) inBase++
+    }
+    // 检查在 added 中的出现次数（已经添加到结果中的）
+    var inAdded = 0
+    for (var k = 0; k < added.length; k++) {
+      if (added[k] === ing) inAdded++
+    }
+    // 如果 base 中已经包含了足够数量，从 added 中去除
+    if (inBase + inAdded <= inBase) {
+      // 还缺一个实例
+      added.push(ing)
+    }
+  }
+  // 确保 added 是 base 中不包含的新食材
+  // 简化：直接判断食材是否在 base 中
+  var pureAdded = []
+  for (var i = 0; i < fullCombo.length; i++) {
+    if (baseIngredients.indexOf(fullCombo[i]) === -1) {
+      pureAdded.push(fullCombo[i])
+    }
+  }
+  // 同时保留两者：如果玩家用了重复的基础食材
+  return pureAdded
+}
+
+// ======== 批发商系统 ========
+
+GameEngine.prototype.generateWholesaleItems = function () {
+  var allIngredients = Object.keys(RC.ingredientRarity)
+  var items = []
+  var count = Math.min(C.wholesale.refreshCount, allIngredients.length)
+
+  // 随机选 count 种
+  var shuffled = allIngredients.slice().sort(function () { return Math.random() - 0.5 })
+  for (var i = 0; i < count; i++) {
+    var rarity = RC.ingredientRarity[shuffled[i]] || 'common'
+    var priceMultiplier = rarity === 'common' ? 1 : rarity === 'uncommon' ? 2 : 4
+    items.push({
+      name: shuffled[i],
+      price: C.wholesale.basePrice * priceMultiplier,
+      quantity: 5 + Math.floor(Math.random() * 6), // 5~10份
+      rarity: rarity,
+    })
+  }
+  this.state.wholesaleItems = items
+  return items
+}
+
+GameEngine.prototype.buyWholesaleItem = function (index) {
+  var items = this.state.wholesaleItems
+  if (index < 0 || index >= items.length) return { success: false, msg: '无效商品' }
+  var item = items[index]
+  var totalCost = item.price * item.quantity
+  if (this.state.gold < totalCost) return { success: false, msg: '金币不足' }
+
+  this.state.gold -= totalCost
+  this.addIngredient(item.name, item.quantity)
+  items.splice(index, 1)
+  this.save()
+  return { success: true, name: item.name, quantity: item.quantity, cost: totalCost }
+}
+
+GameEngine.prototype.refreshWholesale = function () {
+  if (this.state.gold < C.wholesale.refreshCost) return { success: false, msg: '金币不足' }
+  this.state.gold -= C.wholesale.refreshCost
+  this.generateWholesaleItems()
+  this.save()
+  return { success: true }
+}
+
+// ======== 离线收益 ========
+
+GameEngine.prototype.processOffline = function () {
+  var now = Date.now()
+  var elapsed = now - this.state.lastActive
+  this.state.lastActive = now
+
+  var shopInfo = C.shopLevels[this.state.shopLevel - 1] || C.shopLevels[0]
+  var maxOfflineMs = shopInfo.maxOfflineHours * 60 * 60 * 1000
+  var effectiveMs = Math.min(elapsed, maxOfflineMs)
+
+  var goldPerMin = C.offline.baseGoldPerMin + this.state.shopLevel * C.offline.goldPerLevel
+  var offlineGold = Math.floor(effectiveMs / 60000) * goldPerMin
+  this.state.gold += offlineGold
+
+  // 重置到白天
+  this.state.currentPeriod = 'day'
+  this.state.periodStartTime = now
+  this.state.currentCustomers = []
+
+  this.save()
+  return { gold: offlineGold, elapsedMinutes: Math.floor(effectiveMs / 60000) }
+}
+
+// ======== 食谱查询 ========
+
+GameEngine.prototype.getDiscoveredRecipes = function () {
+  var result = []
+  var ids = Object.keys(this.state.discoveredRecipes)
+  for (var i = 0; i < ids.length; i++) {
+    var recipe = RC.getRecipeById(ids[i])
+    if (recipe) {
+      result.push({
+        recipe: recipe,
+        data: this.state.discoveredRecipes[ids[i]],
+      })
+    }
+  }
+  return result
+}
+
+GameEngine.prototype.getUndiscoveredRecipes = function () {
+  var result = []
+  for (var i = 0; i < RC.recipes.length; i++) {
+    if (!this.state.discoveredRecipes[RC.recipes[i].id]) {
+      result.push(RC.recipes[i])
+    }
+  }
+  return result
+}
+
+GameEngine.prototype.getRecipeById = function (id) {
+  return RC.getRecipeById(id)
+}
+
+// ======== 统计 ========
+
+GameEngine.prototype.getStats = function () {
+  var shopInfo = this.getShopInfo()
+  var foxInfo = this.getFoxInfo()
+  return {
+    gold: this.state.gold,
+    totalEarned: this.state.totalEarned,
+    shopLevel: this.state.shopLevel,
+    shopName: shopInfo.current.name,
+    foxLevel: this.state.foxLevel,
+    foxName: foxInfo.current.name,
+    totalServed: this.state.totalServed,
+    totalCustomers: this.state.stats.totalCustomers,
+    totalRecipesDiscovered: this.state.stats.totalRecipesDiscovered,
+    totalExploreCount: this.state.stats.totalExploreCount,
+    dayCount: this.state.stats.dayCount,
+    currentPeriod: this.state.currentPeriod,
+    customerCount: this.state.currentCustomers.length,
+    maxCustomers: this.getMaxCustomers(),
+    isExploring: this.state.isExploring,
+    inventoryTotal: this.getInventoryTotal(),
+    maxInventory: this.state.maxInventory,
+    menuCount: this.state.menu.length,
+    maxMenuSlots: this.state.maxMenuSlots,
+    discoveredCount: Object.keys(this.state.discoveredRecipes).length,
+    totalRecipes: RC.recipes.length,
+  }
 }
 
 window.GameEngine = GameEngine
@@ -634,7 +1450,8 @@ window.GameEngine = GameEngine
 
 // ====== renderer.js ======
 /**
- * Canvas渲染工具
+ * 狐狸的配料食堂 - Canvas渲染器
+ * 白天场景、夜晚场景、弹窗、升级、统计
  */
 var C = window.GameConfig
 
@@ -643,211 +1460,678 @@ function Renderer(canvas) {
   this.ctx = canvas.getContext('2d')
   this.width = canvas.width
   this.height = canvas.height
+
+  // 设计基准 375x667
+  this.scaleX = this.width / 375
+  this.scaleY = this.height / 667
 }
 
-/** 清除画布 */
+// ======== 基础绘制 ========
+
 Renderer.prototype.clear = function (color) {
   this.ctx.fillStyle = color || C.theme.creamWhite
   this.ctx.fillRect(0, 0, this.width, this.height)
 }
 
-/** 圆角矩形 */
-Renderer.prototype.roundRect = function (x, y, w, h, r, fillColor, strokeColor, lineWidth) {
+Renderer.prototype.rr = function (x, y, w, h, r, fill, stroke, lw) {
   var ctx = this.ctx
   ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y)
   ctx.arcTo(x + w, y, x + w, y + r, r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
-  ctx.lineTo(x + r, y + h)
-  ctx.arcTo(x, y + h, x, y + h - r, r)
-  ctx.lineTo(x, y + r)
-  ctx.arcTo(x, y, x + r, y, r)
-  ctx.closePath()
-  if (fillColor) { ctx.fillStyle = fillColor; ctx.fill() }
-  if (strokeColor) { ctx.strokeStyle = strokeColor; ctx.lineWidth = lineWidth || 1; ctx.stroke() }
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r)
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath()
+  if (fill) { ctx.fillStyle = fill; ctx.fill() }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke() }
 }
 
-/** 绘制文本（自动换行） */
-Renderer.prototype.drawText = function (text, x, y, opts) {
+Renderer.prototype.text = function (txt, x, y, opts) {
   opts = opts || {}
   var ctx = this.ctx
-  var fontSize = opts.fontSize || 14
-  var color = opts.color || C.theme.darkText
-  var align = opts.align || 'left'
-  var bold = opts.bold || false
-  var maxWidth = opts.maxWidth || 9999
-
-  ctx.font = (bold ? 'bold ' : '') + fontSize + 'px "PingFang SC", "Microsoft YaHei", sans-serif'
-  ctx.fillStyle = color
-  ctx.textAlign = align
+  var fs = opts.fontSize || 14
+  ctx.font = (opts.bold ? 'bold ' : '') + fs + 'px "PingFang SC","Microsoft YaHei",sans-serif'
+  ctx.fillStyle = opts.color || C.theme.darkText
+  ctx.textAlign = opts.align || 'left'
   ctx.textBaseline = 'top'
-
-  var chars = String(text).split('')
-  var lines = []
-  var line = ''
-  for (var i = 0; i < chars.length; i++) {
-    var testLine = line + chars[i]
-    if (ctx.measureText(testLine).width > maxWidth && line !== '') {
-      lines.push(line)
-      line = chars[i]
-      if (opts.maxLines && lines.length >= opts.maxLines) { lines.push('…'); break }
-    } else { line = testLine }
-  }
-  if (line) lines.push(line)
-
-  var lineH = fontSize * 1.4
-  var startY = align === 'center' ? y - (lines.length - 1) * lineH / 2 : y
-  for (var j = 0; j < lines.length; j++) {
-    ctx.fillText(lines[j], align === 'center' ? x : x, startY + j * lineH)
-  }
-  return lines.length
+  ctx.fillText(txt, x, y)
 }
 
-/** 进度条 */
-Renderer.prototype.drawProgress = function (cur, total, x, y, w, h) {
-  this.roundRect(x, y, w, h, h / 2, '#E8DDD0')
-  var fillW = Math.max(w * (cur / total), h)
-  this.roundRect(x, y, fillW, h, h / 2, C.theme.warmOrange)
-  this.drawText(cur + '/' + total, x + w / 2, y + (h - 14) / 2, {
-    fontSize: 11, color: '#FFFFFF', bold: true, align: 'center',
-  })
-}
-
-/** 计时条 */
-Renderer.prototype.drawTimer = function (rem, max, x, y, w, h) {
-  var ratio = rem / max
-  var color = ratio > 0.5 ? '#4CAF50' : ratio > 0.25 ? '#FF9800' : '#FF5252'
-  this.roundRect(x, y, w, h, h / 2, '#E8DDD0')
-  this.roundRect(x, y, w * ratio, h, h / 2, color)
-}
-
-/** 生命值 */
-Renderer.prototype.drawLives = function (lives, maxLives, x, y) {
-  var s = ''
-  for (var i = 0; i < maxLives; i++) s += i < lives ? '❤️' : '🖤'
-  this.drawText(s, x, y, { fontSize: 14 })
-}
-
-/** 配料标签 */
-Renderer.prototype.drawTag = function (text, x, y, w, h) {
-  this.roundRect(x, y, w, h, 6, '#F5EDE0')
-  this.drawText(text, x + w / 2, y + (h - 12) / 2, {
-    fontSize: 11, color: C.theme.lightText, align: 'center', maxWidth: w - 10,
-  })
-}
-
-/** 配料表卡片 */
-Renderer.prototype.drawIngredientCard = function (ingredients, x, y, w, h) {
-  this.roundRect(x, y, w, h, 12, '#FFFFFF', '#E8DDD0', 1)
-
-  // 标题栏
-  this.roundRect(x, y, w, 36, 12, C.theme.warmOrange)
-  var ctx = this.ctx
-  ctx.fillStyle = C.theme.warmOrange
-  ctx.fillRect(x, y + 18, w, 18)
-  this.drawText('📋 配料表', x + w / 2, y + 8, { fontSize: 14, color: '#FFFFFF', bold: true, align: 'center' })
-
-  // 配料网格
-  var tagW = (w - 40) / 3
-  var tagH = 28
-  var sx = x + 10
-  var sy = y + 48
-
-  for (var i = 0; i < ingredients.length; i++) {
-    var col = i % 3
-    var row = Math.floor(i / 3)
-    var tx = sx + col * (tagW + 6)
-    var ty = sy + row * (tagH + 6)
-    if (ty + tagH > y + h - 10) {
-      this.drawText('……还有更多', x + w / 2, ty, { fontSize: 12, color: C.theme.warmOrange, align: 'center' })
-      return
-    }
-    this.drawTag(ingredients[i], tx, ty, tagW, tagH)
-  }
-}
-
-/** 选项按钮 */
-Renderer.prototype.drawOption = function (text, index, x, y, w, h, state) {
-  var colors = {
-    _default: { bg: '#FFFFFF', text: C.theme.darkText, border: '#E8DDD0' },
-    selected: { bg: C.theme.warmOrange, text: '#FFFFFF', border: C.theme.warmOrange },
-    correct:  { bg: C.theme.grassGreen, text: '#FFFFFF', border: C.theme.grassGreen },
-    wrong:    { bg: C.theme.tomatoRed, text: '#FFFFFF', border: C.theme.tomatoRed },
-    disabled: { bg: '#F5F5F5', text: '#BBBBBB', border: '#E0E0E0' },
-  }
-  var c = colors[state] || colors._default
-  this.roundRect(x, y, w, h, 10, c.bg, c.border, 2)
-  var labels = ['A.', 'B.', 'C.', 'D.']
-  this.drawText(labels[index], x + 16, y + (h - 20) / 2, { fontSize: 16, color: c.text, bold: true })
-  this.drawText(text, x + 48, y + (h - 20) / 2, { fontSize: 14, color: c.text, maxWidth: w - 60 })
-}
-
-/** 狐狸表情绘制 */
-Renderer.prototype.drawFox = function (state, x, y, size) {
+Renderer.prototype.drawFox = function (mood, x, y, size) {
   var ctx = this.ctx
   var hs = size / 2
+  var baseY = y
 
   // 身体
-  ctx.beginPath(); ctx.arc(x, y + hs * 0.3, hs * 0.7, 0, Math.PI * 2)
+  ctx.beginPath(); ctx.arc(x, baseY + hs * 0.3, hs * 0.7, 0, Math.PI * 2)
   ctx.fillStyle = C.theme.warmOrange; ctx.fill()
 
   // 耳朵
-  ctx.beginPath(); ctx.moveTo(x - hs * 0.5, y - hs * 0.1); ctx.lineTo(x - hs * 0.7, y - hs * 0.5); ctx.lineTo(x - hs * 0.2, y - hs * 0.1); ctx.fill()
-  ctx.beginPath(); ctx.moveTo(x + hs * 0.5, y - hs * 0.1); ctx.lineTo(x + hs * 0.7, y - hs * 0.5); ctx.lineTo(x + hs * 0.2, y - hs * 0.1); ctx.fill()
+  ctx.beginPath(); ctx.moveTo(x - hs * 0.5, baseY - hs * 0.1)
+  ctx.lineTo(x - hs * 0.7, baseY - hs * 0.5); ctx.lineTo(x - hs * 0.2, baseY - hs * 0.1); ctx.fill()
+  ctx.beginPath(); ctx.moveTo(x + hs * 0.5, baseY - hs * 0.1)
+  ctx.lineTo(x + hs * 0.7, baseY - hs * 0.5); ctx.lineTo(x + hs * 0.2, baseY - hs * 0.1); ctx.fill()
 
   // 肚子
-  ctx.beginPath(); ctx.ellipse(x, y + hs * 0.6, hs * 0.35, hs * 0.4, 0, 0, Math.PI * 2)
-  ctx.fillStyle = '#FFFFFF'; ctx.fill()
+  ctx.beginPath(); ctx.ellipse(x, baseY + hs * 0.6, hs * 0.35, hs * 0.4, 0, 0, Math.PI * 2)
+  ctx.fillStyle = '#FFF'; ctx.fill()
 
-  var eyeY = y - hs * 0.05
-  var eyeSize = hs * 0.08
+  var eyeY = baseY - hs * 0.05
 
-  switch (state) {
-    case 'happy': case 'excited':
+  switch (mood) {
+    case 'happy':
+    case 'excited':
       ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 2
       ctx.beginPath(); ctx.arc(x - hs * 0.22, eyeY, hs * 0.1, Math.PI, 0); ctx.stroke()
       ctx.beginPath(); ctx.arc(x + hs * 0.22, eyeY, hs * 0.1, Math.PI, 0); ctx.stroke()
-      ctx.beginPath(); ctx.arc(x, y + hs * 0.25, hs * 0.12, 0, Math.PI); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.25, hs * 0.12, 0, Math.PI); ctx.stroke()
+      this.text('⭐', x + hs * 0.7, baseY - hs * 0.3, { fontSize: hs * 0.25 })
       break
-    case 'sad': case 'defeated':
+    case 'sad':
       ctx.fillStyle = C.theme.darkText
-      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY + hs * 0.05, eyeSize, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY + hs * 0.05, eyeSize, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY + hs * 0.05, hs * 0.08, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY + hs * 0.05, hs * 0.08, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = '#64B5F6'
       ctx.beginPath(); ctx.arc(x - hs * 0.25, eyeY + hs * 0.3, hs * 0.04, 0, Math.PI * 2); ctx.fill()
       ctx.beginPath(); ctx.arc(x + hs * 0.25, eyeY + hs * 0.3, hs * 0.04, 0, Math.PI * 2); ctx.fill()
       ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 1.5
-      ctx.beginPath(); ctx.arc(x, y + hs * 0.4, hs * 0.12, Math.PI, 0); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.4, hs * 0.12, Math.PI, 0); ctx.stroke()
       break
-    case 'celebrate':
+    case 'working':
       ctx.fillStyle = C.theme.darkText
-      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, hs * 0.12, 0, Math.PI * 2); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, hs * 0.12, 0, Math.PI * 2); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(x - hs * 0.08, eyeY); ctx.lineTo(x + hs * 0.08, eyeY); ctx.stroke()
+      ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.3, hs * 0.06, 0, Math.PI); ctx.stroke()
+      break
+    case 'exploring':
+      // 奔跑状态
+      ctx.fillStyle = C.theme.darkText
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
       ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 1.5
-      ctx.beginPath(); ctx.arc(x, y + hs * 0.2, hs * 0.15, 0, Math.PI); ctx.stroke()
-      this.drawText('⭐', x + hs * 0.5, y - hs * 0.2, { fontSize: hs * 0.3, align: 'center' })
-      this.drawText('✨', x - hs * 0.6, y - hs * 0.1, { fontSize: hs * 0.25, align: 'center' })
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.3, hs * 0.08, 0, Math.PI); ctx.stroke()
+      this.text('💨', x + hs * 0.8, baseY - hs * 0.2, { fontSize: hs * 0.3 })
+      break
+    case 'surprised':
+      ctx.fillStyle = '#FFF'; ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 1.5
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, hs * 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, hs * 0.1, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.25, hs * 0.08, 0, Math.PI * 2); ctx.fillStyle = C.theme.darkText; ctx.fill()
       break
     default:
       ctx.fillStyle = C.theme.darkText
-      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill()
-      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, eyeSize, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x - hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath(); ctx.arc(x + hs * 0.2, eyeY, hs * 0.07, 0, Math.PI * 2); ctx.fill()
       ctx.strokeStyle = C.theme.darkText; ctx.lineWidth = 1.5
-      ctx.beginPath(); ctx.arc(x, y + hs * 0.3, hs * 0.08, 0, Math.PI); ctx.stroke()
+      ctx.beginPath(); ctx.arc(x, baseY + hs * 0.3, hs * 0.08, 0, Math.PI); ctx.stroke()
   }
 }
 
-/** 分数 */
-Renderer.prototype.drawScore = function (score, x, y) {
-  this.drawText('⭐ ' + score, x, y, { fontSize: 18, bold: true })
+Renderer.prototype.drawButton = function (x, y, w, h, text, opts) {
+  opts = opts || {}
+  var bg = opts.bg || C.theme.warmOrange
+  var tc = opts.textColor || '#FFF'
+  var fs = opts.fontSize || 14
+  var r = opts.radius || (h / 2)
+  this.rr(x, y, w, h, r, bg)
+  this.text(text, x + w / 2, y + h / 2 - fs / 2, { fontSize: fs, color: tc, bold: true, align: 'center' })
 }
 
-/** 连击 */
-Renderer.prototype.drawCombo = function (combo, x, y) {
-  if (combo < 2) return
-  this.drawText('🔥 ' + combo + '连击!', x, y, { fontSize: 14, color: C.theme.tomatoRed, bold: true, align: 'right' })
+// ======== 顶部状态栏 ========
+
+Renderer.prototype.drawTopBar = function (stats) {
+  var w = this.width
+
+  this.rr(0, 0, w, 50, 0, C.theme.warmOrange)
+
+  // 周期标签
+  var periodText = stats.currentPeriod === 'day' ? '☀️ 白天' : '🌙 夜晚'
+  this.text(periodText, 14, 8, { fontSize: 13, color: '#FFF', bold: true })
+
+  // 等级
+  this.text('🏠 Lv.' + stats.shopLevel, 14, 28, { fontSize: 11, color: 'rgba(255,255,255,0.8)' })
+
+  // 金币
+  var goldX = w - 120
+  this.rr(goldX, 8, 110, 34, 15, 'rgba(255,255,255,0.2)')
+  this.text('💰 ' + stats.gold, goldX + 10, 15, { fontSize: 14, color: '#FFF', bold: true })
+  this.text('🦊 Lv.' + stats.foxLevel, goldX + 10, 31, { fontSize: 10, color: 'rgba(255,255,255,0.8)' })
+}
+
+// ======== 白天场景 ========
+
+Renderer.prototype.drawDayScene = function (stats, customers) {
+  var w = this.width, h = this.height
+
+  // 背景
+  this.clear(C.theme.creamWhite)
+
+  // 顶部状态栏
+  this.drawTopBar(stats)
+
+  // 餐厅背景
+  var bgY = 50
+  this.rr(0, bgY, w, h - bgY, 0, C.theme.creamWhite)
+
+  // 地板
+  var floorY = h - 30
+  this.rr(0, floorY, w, 30, 0, '#E8DDD0')
+  this.ctx.fillStyle = '#DDD0C0'
+  this.ctx.fillRect(0, floorY, w, 2)
+
+  // 桌子（装饰）
+  var tableX = w / 2 - 40
+  var tableY = h - 120
+  this.rr(tableX, tableY, 80, 15, 4, '#D2B48C')
+
+  // 画顾客
+  this.drawCustomers(customers)
+
+  // 狐狸角色
+  var foxY = tableY - 50
+  if (stats.isExploring) {
+    this.drawFox('exploring', w / 2, foxY, 60)
+    this.text('🔍 探索中...', w / 2, foxY - 40, { fontSize: 12, color: C.theme.warmOrange, bold: true, align: 'center' })
+  } else {
+    this.drawFox('idle', w / 2, foxY, 60)
+  }
+
+  // 周期倒计时
+  var periodElapsed = 0
+  // (在 main.js 计算后通过额外参数传入)
+  if (stats.periodRemaining) {
+    var secs = Math.ceil(stats.periodRemaining / 1000)
+    var min = Math.floor(secs / 60)
+    var sec = secs % 60
+    this.text('⏱ ' + min + ':' + (sec < 10 ? '0' : '') + sec, w / 2, bgY + 8, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+  }
+
+  // 底部按钮
+  var bY = h - 44
+  var btnW = Math.floor((w - 55) / 4)
+  var btnH = 36
+
+  this.drawButton(10, bY, btnW, btnH, '🔍 探索', { fontSize: 12 })
+  this.drawButton(15 + btnW, bY, btnW, btnH, '📋 菜单', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(20 + btnW * 2, bY, btnW, btnH, '⬆ 升级', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+  this.drawButton(25 + btnW * 3, bY, btnW, btnH, '📊 统计', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+}
+
+Renderer.prototype.drawCustomers = function (customers) {
+  var w = this.width
+  for (var i = 0; i < customers.length; i++) {
+    var c = customers[i]
+    var cx = 30 + i * (w - 60) / Math.max(3, customers.length)
+    var cy = 70 + (i % 2) * 60
+
+    // 顾客身体
+    this.rr(cx - 18, cy, 36, 50, 8, '#E0E0E0', '#BBB', 1)
+
+    // 脸
+    this.ctx.beginPath()
+    this.ctx.arc(cx, cy + 10, 14, 0, Math.PI * 2)
+    this.ctx.fillStyle = '#FFE0BD'
+    this.ctx.fill()
+
+    // 眼睛
+    if (c.state === 'leaving') {
+      this.text('😡', cx, cy, { fontSize: 12 })
+    } else if (c.state === 'eating') {
+      this.text('😋', cx, cy, { fontSize: 12 })
+    } else if (c.state === 'serving') {
+      this.text('😊', cx, cy, { fontSize: 12 })
+    } else {
+      this.text('😐', cx, cy, { fontSize: 12 })
+    }
+
+    // 头顶气泡（显示点的食谱）
+    if (c.orderItem && c.state === 'waiting') {
+      var bubbleX = cx - 14
+      var bubbleY = cy - 22
+      this.rr(bubbleX, bubbleY, 28, 18, 9, '#FFF', C.theme.warmOrange, 1)
+      this.text('🍽', bubbleX + 14, bubbleY + 1, { fontSize: 10, align: 'center' })
+    }
+
+    // 耐心条
+    if (c.state === 'waiting') {
+      var barW = 36
+      var barH = 4
+      var barX = cx - barW / 2
+      var barY = cy + 35
+      this.rr(barX, barY, barW, barH, 2, '#E8DDD0')
+      var pct = Math.max(0, c.patience / c.patienceMax)
+      var barColor = pct > 0.5 ? C.theme.grassGreen : pct > 0.25 ? C.theme.eggYellow : C.theme.tomatoRed
+      this.rr(barX, barY, barW * pct, barH, 2, barColor)
+    }
+  }
+}
+
+// ======== 白天弹窗 ========
+
+Renderer.prototype.drawRecipeChoiceDialog = function (customerId, discoveredRecipes) {
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 320, dH = 350
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, '#FFF')
+  this.text('🍽 选择出餐食谱', W / 2, dY + 20, { fontSize: 18, bold: true, align: 'center' })
+
+  var listY = dY + 50
+  for (var i = 0; i < discoveredRecipes.length; i++) {
+    var r = discoveredRecipes[i]
+    var ry = listY + i * 44
+    if (ry + 40 > dY + dH - 50) break
+
+    this.rr(dX + 12, ry, dW - 24, 38, 8, C.theme.creamWhite, C.theme.warmOrange, 1)
+    this.text(r.recipe.icon + ' ' + r.recipe.name, dX + 24, ry + 8, { fontSize: 14, bold: true })
+    this.text('⭐' + r.recipe.starRating + '  💰' + r.recipe.price, dX + dW - 60, ry + 8, { fontSize: 11, color: C.theme.lightText })
+  }
+
+  if (discoveredRecipes.length === 0) {
+    this.text('还没有发现食谱！去夜晚研发吧', W / 2, dY + 120, { fontSize: 13, color: C.theme.lightText, align: 'center' })
+  }
+
+  // 取消
+  this.rr(dX + 12, dY + dH - 42, dW - 24, 34, 17, '#E8DDD0')
+  this.text('取消', W / 2, dY + dH - 34, { fontSize: 14, color: C.theme.lightText, align: 'center' })
+}
+
+Renderer.prototype.drawExploreResult = function (result) {
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 300, dH = 280
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, '#FFF')
+  this.rr(dX, dY, dW, 40, 16, C.theme.grassGreen)
+  this.rr(dX, dY + 24, dW, 16, 0, C.theme.grassGreen)
+  this.text('🎒 探索收获！', W / 2, dY + 10, { fontSize: 16, color: '#FFF', bold: true, align: 'center' })
+
+  var listY = dY + 60
+  for (var i = 0; i < result.ingredients.length; i++) {
+    var ing = result.ingredients[i]
+    var iy = listY + i * 40
+    this.rr(dX + 20, iy, dW - 40, 32, 8, C.theme.creamWhite)
+    this.text('🧺 ' + ing.name + ' ×' + ing.quantity, dX + 30, iy + 7, { fontSize: 14, bold: true })
+  }
+
+  // 确认
+  this.drawButton(W / 2 - 60, dY + dH - 55, 120, 38, '太棒了！', { fontSize: 14 })
+}
+
+// ======== 夜晚场景 ========
+
+Renderer.prototype.drawNightScene = function (stats, inventory, wholesaleCount) {
+  var w = this.width, h = this.height
+
+  // 深色背景
+  var ctx = this.ctx
+  ctx.fillStyle = C.theme.nightBg
+  ctx.fillRect(0, 0, w, h)
+
+  // 星星
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'
+  for (var i = 0; i < 20; i++) {
+    var sx = (i * 37 + 13) % w
+    var sy = (i * 53 + 7) % 60 + 55
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill()
+  }
+
+  // 顶部状态栏（夜晚版本）
+  this.rr(0, 0, w, 50, 0, C.theme.nightCard)
+  this.text('🌙 夜晚研发', 14, 8, { fontSize: 13, color: '#FFF', bold: true })
+  this.text('🏠 Lv.' + stats.shopLevel, 14, 28, { fontSize: 11, color: 'rgba(255,255,255,0.6)' })
+
+  var goldX = w - 120
+  this.rr(goldX, 8, 110, 34, 15, 'rgba(255,255,255,0.1)')
+  this.text('💰 ' + stats.gold, goldX + 10, 15, { fontSize: 14, color: C.theme.starGold, bold: true })
+  this.text('📦 ' + stats.inventoryTotal + '/' + stats.maxInventory, goldX + 10, 31, { fontSize: 10, color: 'rgba(255,255,255,0.6)' })
+
+  // 狐狸（夜晚坐姿）
+  this.drawFox('idle', w / 2, 130, 50)
+
+  // 操作卡片
+  var cardY = 170
+  var cardH = 80
+  var gap = 8
+  var cardW = w - 30
+
+  // 卡片1: 食材研发
+  this.rr(15, cardY, cardW, cardH, 12, C.theme.nightCard)
+  this.text('🧪 食材研发', 30, cardY + 12, { fontSize: 15, bold: true, color: '#FFF' })
+  this.text('选择 2-5 种食材进行组合，尝试发现新食谱', 30, cardY + 36, { fontSize: 11, color: 'rgba(255,255,255,0.6)' })
+  this.text('📦 库存: ' + stats.inventoryTotal + '/' + stats.maxInventory, 30, cardY + 56, { fontSize: 11, color: C.theme.lightText })
+  this.drawButton(cardW - 80, cardY + 18, 65, 40, '开始', { fontSize: 13 })
+
+  // 卡片2: 菜单管理
+  var card2Y = cardY + cardH + gap
+  this.rr(15, card2Y, cardW, cardH, 12, C.theme.nightCard)
+  this.text('📋 菜单管理', 30, card2Y + 12, { fontSize: 15, bold: true, color: '#FFF' })
+  this.text('当前菜单位: ' + stats.menuCount + '/' + stats.maxMenuSlots, 30, card2Y + 36, { fontSize: 11, color: 'rgba(255,255,255,0.6)' })
+  this.drawButton(cardW - 80, card2Y + 18, 65, 40, '管理', { fontSize: 13, bg: C.theme.labBlue })
+
+  // 卡片3: 批发商
+  var card3Y = card2Y + cardH + gap
+  this.rr(15, card3Y, cardW, cardH, 12, C.theme.nightCard)
+  this.text('🏪 批发商', 30, card3Y + 12, { fontSize: 15, bold: true, color: '#FFF' })
+  this.text('可购买食材: ' + wholesaleCount + ' 种', 30, card3Y + 36, { fontSize: 11, color: 'rgba(255,255,255,0.6)' })
+  this.drawButton(cardW - 80, card3Y + 18, 65, 40, '逛逛', { fontSize: 13, bg: C.theme.eggYellow, textColor: C.theme.darkText })
+
+  // 周期倒计时
+  if (stats.periodRemaining) {
+    var secs = Math.ceil(stats.periodRemaining / 1000)
+    this.text('⏱ 剩余 ' + secs + '秒', w / 2, h - 12, { fontSize: 11, color: 'rgba(255,255,255,0.4)', align: 'center' })
+  }
+}
+
+// ======== 食材选择面板 ========
+
+Renderer.prototype.drawIngredientSelector = function (inventory, selected) {
+  selected = selected || []
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 340, dH = 440
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, C.theme.nightCard)
+  this.text('🧪 选择研发食材', W / 2, dY + 18, { fontSize: 17, bold: true, color: '#FFF', align: 'center' })
+  var selectedText = '已选 ' + selected.length + '/5 种'
+  this.text(selectedText, W / 2, dY + 42, { fontSize: 11, color: selected.length >= 2 ? C.theme.grassGreen : 'rgba(255,255,255,0.5)', align: 'center' })
+
+  // 食材列表
+  var names = Object.keys(inventory)
+  var listY = dY + 60
+  var cellH = 32
+  var cols = 2
+  var cellW = (dW - 40) / cols
+
+  for (var i = 0; i < Math.min(names.length, 20); i++) {
+    var col = i % cols
+    var row = Math.floor(i / cols)
+    var ix = dX + 15 + col * cellW
+    var iy = listY + row * (cellH + 4)
+
+    var isSelected = selected.indexOf(names[i]) !== -1
+    var bgColor = isSelected ? '#2a5a3a' : '#1a2a45'
+    var borderColor = isSelected ? C.theme.grassGreen : '#3a5a8a'
+    this.rr(ix, iy, cellW - 10, cellH, 6, bgColor, borderColor, isSelected ? 2 : 1)
+    this.text((isSelected ? '✅ ' : '') + names[i], ix + 8, iy + 7, { fontSize: 12, color: isSelected ? '#FFF' : '#CCC' })
+    this.text('×' + inventory[names[i]], ix + cellW - 30, iy + 7, { fontSize: 11, color: C.theme.lightText })
+  }
+
+  if (names.length === 0) {
+    this.text('仓库空空如也... 去探索或批发吧', W / 2, dY + 160, { fontSize: 13, color: 'rgba(255,255,255,0.5)', align: 'center' })
+  }
+
+  // 研发按钮
+  this.drawButton(dX + 15, dY + dH - 55, dW - 30, 38, '🔥 研发！', { fontSize: 14, bg: C.theme.tomatoRed })
+
+  // 取消
+  this.drawButton(dX + 15, dY + dH - 100, dW - 30, 34, '取消', { fontSize: 13, bg: '#3a5a8a', textColor: '#CCC' })
+}
+
+// ======== 研发结果弹窗 ========
+
+Renderer.prototype.drawDiscoverResult = function (result) {
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 320, dH = 360
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, '#FFF')
+
+  if (result.result === 'discover') {
+    // 发现新食谱
+    this.rr(dX, dY, dW, 45, 16, C.theme.grassGreen)
+    this.rr(dX, dY + 29, dW, 16, 0, C.theme.grassGreen)
+    this.text('🎉 发现新食谱！', W / 2, dY + 12, { fontSize: 17, color: '#FFF', bold: true, align: 'center' })
+
+    var r = result.recipe
+    this.text(r.icon + ' ' + r.name, W / 2, dY + 60, { fontSize: 20, bold: true, align: 'center' })
+    this.text('⭐' + r.starRating + '  💰' + r.price, W / 2, dY + 88, { fontSize: 13, color: C.theme.warmOrange, bold: true, align: 'center' })
+
+    // 配料
+    this.text('📋 配料:', dX + 20, dY + 115, { fontSize: 11, color: C.theme.lightText, bold: true })
+    var ingStr = r.ingredients.join(' · ')
+    this.text(ingStr, dX + 20, dY + 135, { fontSize: 10, color: C.theme.darkText })
+  } else if (result.result === 'mastery') {
+    this.rr(dX, dY, dW, 45, 16, C.theme.labBlue)
+    this.rr(dX, dY + 29, dW, 16, 0, C.theme.labBlue)
+    this.text('🔁 熟练度提升！', W / 2, dY + 12, { fontSize: 17, color: '#FFF', bold: true, align: 'center' })
+
+    var r = result.recipe
+    this.text(r.icon + ' ' + r.name, W / 2, dY + 60, { fontSize: 20, bold: true, align: 'center' })
+    this.text('熟练度 +' + result.xpGained, W / 2, dY + 95, { fontSize: 14, color: C.theme.warmOrange, bold: true, align: 'center' })
+  } else {
+    this.rr(dX, dY, dW, 45, 16, C.theme.lightText)
+    this.rr(dX, dY + 29, dW, 16, 0, C.theme.lightText)
+    this.text('😅 这组合做不出什么...', W / 2, dY + 12, { fontSize: 16, color: '#FFF', bold: true, align: 'center' })
+
+    this.text(result.msg || '返还了一半食材', W / 2, dY + 80, { fontSize: 13, color: C.theme.lightText, align: 'center' })
+  }
+
+  // 狐狸反应
+  this.drawFox(result.result === 'discover' ? 'excited' : 'happy', W / 2, dY + 155, 50)
+
+  // 确认
+  this.drawButton(dX + 20, dY + dH - 55, dW - 40, 40, '确认', { fontSize: 15 })
+}
+
+// ======== 菜单管理界面 ========
+
+Renderer.prototype.drawMenuManagement = function (menu, maxSlots, allRecipes, discoveredMap) {
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 340, dH = 480
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, '#FFF')
+  this.text('📋 菜单管理', W / 2, dY + 16, { fontSize: 17, bold: true, align: 'center' })
+  this.text('已用 ' + menu.length + '/' + maxSlots + ' 个菜单位', W / 2, dY + 40, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+
+  // 当前菜单
+  var listY = dY + 55
+  this.text('— 当前菜单 —', W / 2, listY, { fontSize: 12, color: C.theme.warmOrange, align: 'center' })
+
+  for (var i = 0; i < menu.length; i++) {
+    var recipe = null
+    for (var j = 0; j < allRecipes.length; j++) {
+      if (allRecipes[j].id === menu[i]) { recipe = allRecipes[j]; break }
+    }
+    if (!recipe) continue
+
+    var ry = listY + 20 + i * 34
+    this.rr(dX + 15, ry, dW - 60, 28, 6, C.theme.creamWhite)
+    this.text(recipe.icon + ' ' + recipe.name, dX + 24, ry + 5, { fontSize: 12, bold: true })
+    var onMenu = menu.indexOf(recipe.id) !== -1
+    this.text(onMenu ? '✅' : '⬜', dX + dW - 35, ry + 3, { fontSize: 14 })
+  }
+
+  // 所有已发现的可添加食谱
+  var addListY = listY + 20 + menu.length * 34 + 10
+  this.text('— 可添加的食谱 —', W / 2, addListY, { fontSize: 12, color: C.theme.grassGreen, align: 'center' })
+
+  var addedCount = 0
+  for (var k = 0; k < allRecipes.length; k++) {
+    var r = allRecipes[k]
+    if (menu.indexOf(r.id) !== -1) continue
+    if (!discoveredMap[r.id]) continue
+    if (addedCount >= 8) break
+
+    var ay = addListY + 20 + addedCount * 34
+    this.rr(dX + 15, ay, dW - 30, 28, 6, '#F5EDE0', '#CCC', 1)
+    this.text(r.icon + ' ' + r.name, dX + 24, ay + 5, { fontSize: 12 })
+    addedCount++
+  }
+
+  if (addedCount === 0) {
+    this.text('(没有可添加的食谱)', W / 2, addListY + 30, { fontSize: 11, color: C.theme.lightText, align: 'center' })
+  }
+
+  // 返回
+  this.drawButton(dX + 15, dY + dH - 40, dW - 30, 32, '返回', { fontSize: 13, bg: '#E8DDD0', textColor: C.theme.darkText })
+}
+
+// ======== 批发商界面 ========
+
+Renderer.prototype.drawWholesaleDialog = function (items, gold) {
+  var ctx = this.ctx
+  var W = this.width, H = this.height
+
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'
+  ctx.fillRect(0, 0, W, H)
+
+  var dW = 340, dH = 420
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  this.rr(dX, dY, dW, dH, 16, '#FFF')
+  this.text('🏪 批发商', W / 2, dY + 16, { fontSize: 17, bold: true, align: 'center' })
+  this.text('💰 ' + gold, W / 2, dY + 38, { fontSize: 12, color: C.theme.warmOrange, bold: true, align: 'center' })
+
+  if (items.length === 0) {
+    this.text('今日商品已售罄', W / 2, dY + 100, { fontSize: 14, color: C.theme.lightText, align: 'center' })
+  }
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i]
+    var iy = dY + 55 + i * 50
+    var rarityColor = item.rarity === 'common' ? '#4CAF50' : item.rarity === 'uncommon' ? '#2196F3' : '#FF9800'
+
+    this.rr(dX + 12, iy, dW - 24, 42, 8, '#F5EDE0', rarityColor, 1)
+    this.text(item.name, dX + 24, iy + 6, { fontSize: 13, bold: true })
+    this.text('×' + item.quantity, dX + 140, iy + 6, { fontSize: 11, color: C.theme.lightText })
+    this.text('💰 ' + (item.price * item.quantity), dX + dW - 80, iy + 6, { fontSize: 12, color: C.theme.warmOrange, bold: true })
+    this.text('💎 ' + item.rarity, dX + dW - 80, iy + 24, { fontSize: 10, color: rarityColor })
+  }
+
+  // 刷新按钮
+  this.drawButton(dX + 15, dY + dH - 85, (dW - 45) / 2, 32, '🔄 刷新 (' + C.wholesale.refreshCost + ')', { fontSize: 11, bg: C.theme.labBlue })
+  // 返回
+  this.drawButton(dX + (dW - 45) / 2 + 30, dY + dH - 85, (dW - 45) / 2, 32, '返回', { fontSize: 12, bg: '#E8DDD0', textColor: C.theme.darkText })
+}
+
+// ======== 升级界面 ========
+
+Renderer.prototype.drawUpgradeScreen = function (shopInfo, foxInfo, gold) {
+  var W = this.width, H = this.height
+
+  this.clear()
+  this.text('⬆ 升级', W / 2, 16, { fontSize: 18, bold: true, align: 'center' })
+
+  // 店铺升级面板
+  var panelY = 50
+  this.rr(12, panelY, W - 24, 100, 12, '#FFF', C.theme.warmOrange, 1)
+  this.text('🏠 店铺 Lv.' + shopInfo.level, 24, panelY + 10, { fontSize: 14, bold: true })
+  this.text(shopInfo.current.name, 24, panelY + 32, { fontSize: 12, color: C.theme.lightText })
+
+  var attrStr = '👥 ' + shopInfo.current.maxCustomers + '  📋 ' + shopInfo.current.menuSlots +
+                '  📦 ' + shopInfo.current.maxInventory
+  this.text(attrStr, 24, panelY + 52, { fontSize: 12, color: C.theme.lightText })
+
+  if (shopInfo.next) {
+    var canUpShop = gold >= shopInfo.next.upgradeCost
+    this.drawButton(W - 100, panelY + 16, 80, 32, canUpShop ? '升级' : '💰不足', {
+      bg: canUpShop ? C.theme.warmOrange : '#CCC', fontSize: 12,
+    })
+    this.text('下一级: ' + shopInfo.next.upgradeCost + '💰', W - 100, panelY + 55, { fontSize: 10, color: C.theme.lightText, align: 'center' })
+  } else {
+    this.text('🏆 满级！', W - 80, panelY + 30, { fontSize: 14, color: C.theme.eggYellow, bold: true, align: 'center' })
+  }
+
+  // 狐狸升级面板
+  var foxPanelY = panelY + 115
+  this.rr(12, foxPanelY, W - 24, 100, 12, '#FFF', C.theme.warmOrange, 1)
+  this.drawFox(foxInfo.isMax ? 'happy' : 'idle', 56, foxPanelY + 32, 50)
+  this.text('🦊 狐狸 Lv.' + foxInfo.level, 90, foxPanelY + 10, { fontSize: 14, bold: true })
+  this.text(foxInfo.current.icon + ' ' + foxInfo.current.name, 90, foxPanelY + 32, { fontSize: 12, color: C.theme.lightText })
+
+  var foxAttr = '⚡ ' + foxInfo.current.serveSpeed + 'x  🔍 ' + foxInfo.current.exploreQuality + 'x  ❤ ' + foxInfo.current.customerFavor + 'x'
+  this.text(foxAttr, 90, foxPanelY + 54, { fontSize: 11, color: C.theme.lightText })
+
+  if (foxInfo.next) {
+    var canUpFox = gold >= foxInfo.next.upgradeCost
+    this.drawButton(W - 100, foxPanelY + 16, 80, 32, canUpFox ? '升级' : '💰不足', {
+      bg: canUpFox ? C.theme.warmOrange : '#CCC', fontSize: 12,
+    })
+    this.text('下一级: ' + foxInfo.next.upgradeCost + '💰', W - 100, foxPanelY + 55, { fontSize: 10, color: C.theme.lightText, align: 'center' })
+  } else {
+    this.text('🏆 满级！', W - 80, foxPanelY + 30, { fontSize: 14, color: C.theme.eggYellow, bold: true, align: 'center' })
+  }
+
+  // 返回
+  this.drawButton(W / 2 - 60, H - 45, 120, 34, '← 返回', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 12 })
+}
+
+// ======== 统计界面 ========
+
+Renderer.prototype.drawStatsScreen = function (stats, discoveredRecipes) {
+  var W = this.width, H = this.height
+
+  this.clear()
+  this.text('📊 经营统计', W / 2, 14, { fontSize: 18, bold: true, align: 'center' })
+
+  var listY = 45
+  var statsData = [
+    { label: '已过天数', value: stats.dayCount + ' 天' },
+    { label: '总收入', value: '💰 ' + stats.totalEarned },
+    { label: '服务顾客', value: '👥 ' + stats.totalServed },
+    { label: '发现食谱', value: '📖 ' + stats.discoveredCount + '/' + stats.totalRecipes },
+    { label: '探索次数', value: '🔍 ' + stats.totalExploreCount },
+    { label: '店铺等级', value: '🏠 Lv.' + stats.shopLevel + ' ' + stats.shopName },
+    { label: '狐狸等级', value: '🦊 Lv.' + stats.foxLevel + ' ' + stats.foxName },
+  ]
+
+  for (var i = 0; i < statsData.length; i++) {
+    var sy = listY + i * 36
+    this.rr(15, sy, W - 30, 30, 8, '#FFF', '#E8DDD0', 1)
+    this.text(statsData[i].label, 24, sy + 7, { fontSize: 12 })
+    this.text(statsData[i].value, W - 24, sy + 7, { fontSize: 12, color: C.theme.warmOrange, bold: true, align: 'right' })
+  }
+
+  // 食谱图鉴
+  var recipeY = listY + statsData.length * 36 + 10
+  this.text('📖 已发现食谱', W / 2, recipeY, { fontSize: 14, bold: true, align: 'center' })
+
+  for (var j = 0; j < discoveredRecipes.length; j++) {
+    var r = discoveredRecipes[j]
+    var ry = recipeY + 24 + j * 30
+    if (ry > H - 50) break
+    this.rr(15, ry, W - 15, 26, 6, '#FFF', '#E8DDD0', 1)
+    this.text(r.recipe.icon + ' ' + r.recipe.name, 24, ry + 5, { fontSize: 11, bold: true })
+    this.text('⭐' + r.recipe.starRating + '  🫸' + r.data.xp, W - 24, ry + 5, { fontSize: 10, color: C.theme.lightText, align: 'right' })
+  }
+
+  if (discoveredRecipes.length === 0) {
+    this.text('还没有发现任何食谱', W / 2, recipeY + 30, { fontSize: 12, color: C.theme.lightText, align: 'center' })
+  }
+
+  // 返回
+  this.drawButton(W / 2 - 50, H - 38, 100, 30, '← 返回', { bg: '#E8DDD0', textColor: C.theme.darkText, fontSize: 11 })
 }
 
 window.Renderer = Renderer
@@ -855,246 +2139,646 @@ window.Renderer = Renderer
 
 // ====== main.js ======
 /**
- * 游戏主入口 - 页面管理 + 触摸交互
+ * 狐狸的配料食堂 - 游戏主入口
+ * 昼夜循环、触摸交互、页面流转
  */
 var C = window.GameConfig
 var Engine = window.GameEngine
 var Renderer = window.Renderer
+var RC = window.RecipeChain
 
 var canvas = wx.createCanvas()
 var renderer = new Renderer(canvas)
 var engine = new Engine()
 
-// 状态
-var page = { name: 'index', data: {} }
+var W = canvas.width
+var H = canvas.height
+
+// 页面状态
+var page = { name: 'dayScene', data: {} }
 var buttons = []
 var touchX = 0, touchY = 0
-var timerInterval = null
+var tickInterval = null
+var foxMood = 'idle'
 
-// ======== 页面渲染 ========
+// 选中的食材（研发用）
+var selectedIngredients = []
 
-function renderIndex() {
-  renderer.clear()
-  var cx = canvas.width / 2, W = canvas.width, H = canvas.height
+// 探索计时器
+var exploreTimer = null
 
-  renderer.drawText('配料猜猜猜', cx, 120, { fontSize: 36, bold: true, align: 'center' })
-  renderer.drawText('看配料表 · 猜食品 · 涨知识', cx, 170, { fontSize: 14, color: C.theme.lightText, align: 'center' })
-  renderer.drawFox('idle', cx, 280, 100)
+// ======== 离线处理 ========
 
-  var btnY = 370
-  renderer.roundRect(cx - 100, btnY, 200, 50, 25, C.theme.warmOrange)
-  renderer.drawText('开始挑战 🎮', cx, btnY + 14, { fontSize: 16, color: '#FFFFFF', bold: true, align: 'center' })
-  renderer.drawText('v' + C.version, 15, H - 30, { fontSize: 11, color: '#CCCCCC' })
+var offlineResult = engine.processOffline()
 
-  buttons = [{ x: cx - 100, y: btnY, w: 200, h: 50, action: 'gotoCategory' }]
+// ======== 获取渲染用的 stats（含 periodRemaining） ========
+
+function getStats() {
+  var stats = engine.getStats()
+  var now = Date.now()
+  var elapsed = now - engine.state.periodStartTime
+  var duration = engine.state.currentPeriod === 'day' ? C.dayDuration : C.nightDuration
+  stats.periodRemaining = Math.max(0, duration - elapsed)
+  return stats
 }
 
-function renderCategory() {
-  renderer.clear()
-  var cx = canvas.width / 2, W = canvas.width
-  var stats = Engine.getQuestionStats()
+// ======== 白天场景绘制 ========
 
-  renderer.drawText('选择分类', cx, 50, { fontSize: 24, bold: true, align: 'center' })
+function renderDayScene() {
+  var stats = getStats()
+  var customers = engine.state.currentCustomers
 
-  var startY = 110, itemH = 60, gap = 10
-  buttons = []
-
-  C.categories.forEach(function (cat, i) {
-    var y = startY + i * (itemH + gap)
-    renderer.roundRect(20, y, W - 40, itemH, 10, '#FFFFFF', '#E8DDD0', 1)
-    renderer.drawText(cat.icon, 32, y + 14, { fontSize: 22 })
-    renderer.drawText(cat.name, 72, y + 10, { fontSize: 16, bold: true, maxWidth: 120 })
-    renderer.drawText('题目 ' + (stats[cat.id] || 0) + '道', W - 95, y + 20, {
-      fontSize: 12, color: C.theme.lightText, align: 'center',
-    })
-    buttons.push({ x: 20, y: y, w: W - 40, h: itemH, action: 'start', cat: cat.id })
-  })
+  renderer.drawDayScene(stats, customers)
+  buttons = buildDayButtons(stats)
 }
 
-function renderQuiz() {
-  var q = engine.getCurrentQuestion()
-  if (!q) { page.name = 'result'; renderResult(); return }
+function buildDayButtons(stats) {
+  var btns = []
+  var w = W, h = H
+  var bY = h - 44
+  var btnW = Math.floor((w - 55) / 4)
+  var btnH = 36
 
-  renderer.clear()
-  var W = canvas.width, H = canvas.height, pd = page.data
+  // 探索按钮
+  btns.push({ x: 10, y: bY, w: btnW, h: btnH, action: 'startExplore' })
+  // 菜单按钮（白天打开菜单管理）
+  btns.push({ x: 15 + btnW, y: bY, w: btnW, h: btnH, action: 'menuManage' })
+  // 升级按钮
+  btns.push({ x: 20 + btnW * 2, y: bY, w: btnW, h: btnH, action: 'upgrade' })
+  // 统计按钮
+  btns.push({ x: 25 + btnW * 3, y: bY, w: btnW, h: btnH, action: 'stats' })
 
-  // 顶部
-  renderer.drawProgress(engine.roundIndex, C.quiz.questionsPerRound, 15, 15, W * 0.35, 18)
-  renderer.drawScore(engine.score, W * 0.4, 12)
-  if (engine.combo >= 2) renderer.drawCombo(engine.combo, W - 15, 12)
-  renderer.drawLives(engine.lives, C.quiz.maxLives, W - 120, 36)
-
-  // 计时条
-  if (pd.timerRemaining !== undefined) {
-    renderer.drawTimer(pd.timerRemaining, C.quiz.timePerQuestion, 15, 44, W - 30, 5)
-  }
-
-  // 配料表
-  var cardX = 20, cardY = 62, cardW = W - 40, cardH = 220
-  renderer.drawIngredientCard(q.ingredients, cardX, cardY, cardW, cardH)
-
-  // 选项
-  var optY = cardY + cardH + 15, optH = 48, optGap = 8
-  buttons = []
-
-  q.options.forEach(function (opt, i) {
-    var y = optY + i * (optH + optGap)
-    var state = '_default'
-    if (pd.answered) {
-      if (i === q.answer) state = 'correct'
-      else if (i === pd.selected && pd.last && !pd.last.isCorrect) state = 'wrong'
-      else state = 'disabled'
+  // 顾客点击
+  var customers = engine.state.currentCustomers
+  for (var i = 0; i < customers.length; i++) {
+    var c = customers[i]
+    var cx = 30 + i * (w - 60) / Math.max(3, customers.length)
+    var cy = 70 + (i % 2) * 60
+    if (c.state === 'waiting') {
+      btns.push({ x: cx - 20, y: cy - 12, w: 40, h: 60, action: 'customerTap', customerId: c.id })
     }
-    renderer.drawOption(opt, i, 20, y, cardW, optH, state)
-    if (!pd.answered) buttons.push({ x: 20, y: y, w: cardW, h: optH, action: 'answer', index: i })
-  })
-
-  // 跳过
-  if (!pd.answered) {
-    renderer.drawText('跳过 ⏭️', W - 20, H - 30, { fontSize: 12, color: C.theme.lightText, align: 'right' })
-    buttons.push({ x: W - 100, y: H - 40, w: 90, h: 30, action: 'skip' })
   }
 
-  // 狐狸反馈
-  if (pd.answered && pd.last) {
-    var fy = cardY + cardH + 10, r = pd.last
-    renderer.drawFox(r.isCorrect ? 'happy' : 'sad', 55, fy, 45)
-    renderer.roundRect(95, fy - 3, W - 115, 65, 10, '#FFFFFF', C.theme.warmOrange, 1)
-    renderer.drawText(r.isCorrect ? '✅ 答对了！' : '❌ 答错了！', 110, fy + 6, {
-      fontSize: 14, color: r.isCorrect ? C.theme.grassGreen : C.theme.tomatoRed, bold: true,
-    })
-    renderer.drawText(r.foxComment, 110, fy + 28, { fontSize: 11, color: C.theme.lightText, maxWidth: W - 135 })
-  }
+  return btns
 }
 
-function renderResult() {
-  var grade = engine.getFinalGrade()
-  var total = engine.roundQuestions.length
-  var correct = engine.answeredCorrectly
-  var cx = canvas.width / 2, H = canvas.height
+// ======== 夜晚场景绘制 ========
 
-  renderer.clear()
-  renderer.drawText('🏆 鉴定结果', cx, 55, { fontSize: 24, bold: true, align: 'center' })
+function renderNightScene() {
+  var stats = getStats()
+  var inventory = engine.getInventory()
+  var wholesaleItems = engine.state.wholesaleItems
 
-  // 评级
-  var ctx = renderer.ctx
-  ctx.beginPath(); ctx.arc(cx, 130, 50, 0, Math.PI * 2)
-  ctx.fillStyle = grade.color + '22'; ctx.fill()
-  ctx.strokeStyle = grade.color; ctx.lineWidth = 3; ctx.stroke()
-  renderer.drawText(grade.icon, cx, 108, { fontSize: 28, align: 'center' })
-  renderer.drawText(grade.grade, cx, 142, { fontSize: 26, color: grade.color, bold: true, align: 'center' })
-  renderer.drawText(grade.label, cx, 82, { fontSize: 13, color: grade.color, bold: true, align: 'center' })
+  renderer.drawNightScene(stats, inventory, wholesaleItems.length)
+  buttons = buildNightButtons(stats)
+}
 
-  renderer.drawText('得分: ' + engine.score, cx, 200, { fontSize: 18, bold: true, align: 'center' })
-  renderer.drawText('正确: ' + correct + '/' + total, cx, 228, { fontSize: 14, color: C.theme.lightText, align: 'center' })
-  renderer.drawFox(grade.grade === 'D' ? 'defeated' : 'celebrate', cx, 300, 90)
+function buildNightButtons(stats) {
+  var btns = []
+  var w = W, h = H
+  var cardY = 170
+  var cardH = 80
+  var gap = 8
+  var cardW = w - 30
 
-  var b1y = H - 120
-  renderer.roundRect(cx - 100, b1y, 200, 44, 22, C.theme.warmOrange)
-  renderer.drawText('再来一局 🔄', cx, b1y + 12, { fontSize: 15, color: '#FFFFFF', bold: true, align: 'center' })
+  // 卡片1: 食材研发
+  btns.push({ x: cardW - 80, y: cardY + 18, w: 65, h: 40, action: 'openIngredientSelector' })
 
-  var b2y = H - 65
-  renderer.roundRect(cx - 100, b2y, 200, 40, 20, '#FFFFFF', C.theme.warmOrange, 1)
-  renderer.drawText('返回首页 🏠', cx, b2y + 11, { fontSize: 13, color: C.theme.warmOrange, align: 'center' })
+  // 卡片2: 菜单管理
+  btns.push({ x: cardW - 80, y: cardY + cardH + gap + 18, w: 65, h: 40, action: 'menuManage' })
 
-  buttons = [
-    { x: cx - 100, y: b1y, w: 200, h: 44, action: 'replay' },
-    { x: cx - 100, y: b2y, w: 200, h: 40, action: 'home' },
-  ]
+  // 卡片3: 批发商
+  btns.push({ x: cardW - 80, y: cardY + (cardH + gap) * 2 + 18, w: 65, h: 40, action: 'wholesale' })
+
+  return btns
+}
+
+// ======== 食材选择面板 ========
+
+function renderIngredientSelector() {
+  var inventory = engine.getInventory()
+  renderer.drawIngredientSelector(inventory, selectedIngredients)
+
+  var W2 = W, H2 = H
+  var dW = 340, dH = 440
+  var dX = (W2 - dW) / 2, dY = (H2 - dH) / 2
+
+  buttons = []
+
+  // 食材格子
+  var names = Object.keys(inventory)
+  var cellH = 32
+  var cols = 2
+  var cellW = (dW - 40) / cols
+  var listY = dY + 60
+
+  for (var i = 0; i < Math.min(names.length, 20); i++) {
+    var col = i % cols
+    var row = Math.floor(i / cols)
+    var ix = dX + 15 + col * cellW
+    var iy = listY + row * (cellH + 4)
+    buttons.push({ x: ix, y: iy, w: cellW - 10, h: cellH, action: 'toggleIngredient', ingredient: names[i] })
+  }
+
+  // 研发按钮
+  buttons.push({ x: dX + 15, y: dY + dH - 55, w: dW - 30, h: 38, action: 'doDiscover' })
+
+  // 取消
+  buttons.push({ x: dX + 15, y: dY + dH - 100, w: dW - 30, h: 34, action: 'closeDialog' })
+}
+
+// ======== 食谱选择弹窗（白天出餐用） ========
+
+function renderRecipeChoice(customerId) {
+  var discovered = engine.getDiscoveredRecipes()
+  renderer.drawRecipeChoiceDialog(customerId, discovered)
+
+  var dW = 320, dH = 350
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+  var listY = dY + 50
+
+  buttons = []
+  for (var i = 0; i < discovered.length; i++) {
+    var ry = listY + i * 44
+    if (ry + 40 > dY + dH - 50) break
+    buttons.push({
+      x: dX + 12, y: ry, w: dW - 24, h: 38,
+      action: 'serveCustomer', customerId: customerId, recipeId: discovered[i].recipe.id,
+    })
+  }
+
+  // 取消
+  buttons.push({ x: dX + 12, y: dY + dH - 42, w: dW - 24, h: 34, action: 'closeDialog' })
+}
+
+// ======== 结果弹窗 ========
+
+function renderExploreResult() {
+  var result = engine.state.exploreResult
+  if (!result) { page.name = 'dayScene'; renderDayScene(); return }
+
+  renderer.drawExploreResult(result)
+
+  buttons = [{ x: W / 2 - 60, y: 300, w: 120, h: 38, action: 'closeDialog' }]
+}
+
+function renderDiscoverResult() {
+  var result = page.data.discoverResult
+  if (!result) { page.name = 'nightScene'; renderNightScene(); return }
+
+  renderer.drawDiscoverResult(result)
+
+  var dW = 320
+  var dX = (W - dW) / 2
+  buttons = [{ x: dX + 20, y: 390, w: dW - 40, h: 40, action: 'closeDialog' }]
+}
+
+// ======== 菜单管理界面 ========
+
+function renderMenuManage() {
+  // 收集已发现的食谱ID和所有食谱
+  var discoveredMap = engine.state.discoveredRecipes
+  var allRecipes = RC.recipes
+  var menu = engine.getMenu()
+
+  renderer.drawMenuManagement(menu, engine.state.maxMenuSlots, allRecipes, discoveredMap)
+
+  var dW = 340, dH = 480
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  buttons = []
+
+  // 当前菜单 - 点击移除
+  var listY = dY + 75
+  for (var i = 0; i < menu.length; i++) {
+    var ry = listY + i * 34
+    buttons.push({ x: dX + dW - 45, y: ry, w: 30, h: 28, action: 'removeFromMenu', recipeId: menu[i] })
+  }
+
+  // 可添加的食谱 - 点击添加
+  var addListY = listY + menu.length * 34 + 30
+  var addedCount = 0
+  for (var k = 0; k < allRecipes.length; k++) {
+    var r = allRecipes[k]
+    if (menu.indexOf(r.id) !== -1) continue
+    if (!discoveredMap[r.id]) continue
+    if (addedCount >= 8) break
+    var ay = addListY + 20 + addedCount * 34
+    buttons.push({ x: dX + 15, y: ay, w: dW - 30, h: 28, action: 'addToMenu', recipeId: r.id })
+    addedCount++
+  }
+
+  // 返回
+  buttons.push({ x: dX + 15, y: dY + dH - 40, w: dW - 30, h: 32, action: 'closeDialog' })
+}
+
+// ======== 批发商界面 ========
+
+function renderWholesale() {
+  var items = engine.state.wholesaleItems
+  if (items.length === 0) {
+    engine.generateWholesaleItems()
+    items = engine.state.wholesaleItems
+  }
+
+  renderer.drawWholesaleDialog(items, engine.state.gold)
+
+  var dW = 340, dH = 420
+  var dX = (W - dW) / 2, dY = (H - dH) / 2
+
+  buttons = []
+
+  // 商品点击购买
+  for (var i = 0; i < items.length; i++) {
+    var iy = dY + 55 + i * 50
+    buttons.push({ x: dX + 12, y: iy, w: dW - 24, h: 42, action: 'buyWholesale', index: i })
+  }
+
+  // 刷新
+  buttons.push({ x: dX + 15, y: dY + dH - 85, w: (dW - 45) / 2, h: 32, action: 'refreshWholesale' })
+  // 返回
+  buttons.push({ x: dX + (dW - 45) / 2 + 30, y: dY + dH - 85, w: (dW - 45) / 2, h: 32, action: 'closeDialog' })
+}
+
+// ======== 升级界面 ========
+
+function renderUpgrade() {
+  var shopInfo = engine.getShopInfo()
+  var foxInfo = engine.getFoxInfo()
+  var gold = engine.state.gold
+
+  renderer.drawUpgradeScreen(shopInfo, foxInfo, gold)
+
+  var W2 = W, H2 = H
+
+  buttons = []
+
+  // 店铺升级按钮
+  var panelY = 50
+  if (shopInfo.next) {
+    buttons.push({ x: W2 - 100, y: panelY + 16, w: 80, h: 32, action: 'upgradeShop' })
+  }
+
+  // 狐狸升级按钮
+  var foxPanelY = panelY + 115
+  if (foxInfo.next) {
+    buttons.push({ x: W2 - 100, y: foxPanelY + 16, w: 80, h: 32, action: 'upgradeFox' })
+  }
+
+  // 返回
+  buttons.push({ x: W2 / 2 - 60, y: H2 - 45, w: 120, h: 34, action: 'closeDialog' })
+}
+
+// ======== 统计界面 ========
+
+function renderStats() {
+  var stats = getStats()
+  var discovered = engine.getDiscoveredRecipes()
+
+  renderer.drawStatsScreen(stats, discovered)
+
+  buttons = [{ x: W / 2 - 50, y: H - 38, w: 100, h: 30, action: 'closeDialog' }]
 }
 
 // ======== 动作处理 ========
 
 function handleAction(btn) {
   switch (btn.action) {
-    case 'gotoCategory':
-      page = { name: 'category', data: {} }; renderCategory(); break
-    case 'start':
-      page.data.cat = btn.cat; startQuiz(); break
-    case 'answer':
-      handleAnswer(btn.index); break
-    case 'skip':
-      handleSkip(); break
-    case 'replay':
-      startQuiz(); break
-    case 'home':
-      page = { name: 'index', data: {} }; buttons = []; renderIndex(); break
+    case 'startExplore':
+      handleStartExplore()
+      break
+    case 'customerTap':
+      handleCustomerTap(btn.customerId)
+      break
+    case 'serveCustomer':
+      handleServeCustomer(btn.customerId, btn.recipeId)
+      break
+    case 'menuManage':
+      page = { name: 'menuManage', data: {} }
+      renderMenuManage()
+      break
+    case 'addToMenu':
+      handleAddToMenu(btn.recipeId)
+      break
+    case 'removeFromMenu':
+      handleRemoveFromMenu(btn.recipeId)
+      break
+    case 'openIngredientSelector':
+      page = { name: 'ingredientSelector', data: {} }
+      selectedIngredients = []
+      renderIngredientSelector()
+      break
+    case 'toggleIngredient':
+      handleToggleIngredient(btn.ingredient)
+      break
+    case 'doDiscover':
+      handleDiscover()
+      break
+    case 'wholesale':
+      page = { name: 'wholesale', data: {} }
+      renderWholesale()
+      break
+    case 'buyWholesale':
+      handleBuyWholesale(btn.index)
+      break
+    case 'refreshWholesale':
+      handleRefreshWholesale()
+      break
+    case 'upgrade':
+      page = { name: 'upgrade', data: {} }
+      renderUpgrade()
+      break
+    case 'upgradeShop':
+      handleUpgradeShop()
+      break
+    case 'upgradeFox':
+      handleUpgradeFox()
+      break
+    case 'stats':
+      page = { name: 'stats', data: {} }
+      renderStats()
+      break
+    case 'closeDialog':
+      if (engine.state.currentPeriod === 'day') {
+        page = { name: 'dayScene', data: {} }
+        renderDayScene()
+      } else {
+        page = { name: 'nightScene', data: {} }
+        renderNightScene()
+      }
+      break
   }
 }
 
-function startQuiz() {
-  clearInterval(timerInterval)
-  engine.startRound(page.data.cat)
-  page.data = { answered: false }
-  page.name = 'quiz'
-  buttons = []
-  renderQuiz()
-  startTimer()
-}
+// ======== 操作实现 ========
 
-function handleAnswer(index) {
-  if (page.data.answered) return
-  page.data.answered = true
-  page.data.selected = index
-  var timeUsed = C.quiz.timePerQuestion - (page.data.timerRemaining || 0)
-  page.data.last = engine.submitAnswer(index, timeUsed)
-  renderQuiz()
-  setTimeout(advance, 2000)
-}
+function handleStartExplore() {
+  var result = engine.startExplore()
+  if (result.success) {
+    foxMood = 'exploring'
 
-function handleSkip() {
-  if (page.data.answered) return
-  page.data.answered = true
-  page.data.last = engine.skipQuestion()
-  renderQuiz()
-  setTimeout(advance, 1500)
-}
+    // 30秒后探索完成
+    if (exploreTimer) clearTimeout(exploreTimer)
+    exploreTimer = setTimeout(function () {
+      var res = engine.completeExplore()
+      if (res) {
+        page = { name: 'exploreResult', data: {} }
+        renderExploreResult()
+      }
+    }, engine.state.exploreDuration)
 
-function handleTimeout() {
-  if (page.data.answered) return
-  page.data.answered = true
-  page.data.last = engine.submitAnswer(-1, C.quiz.timePerQuestion)
-  page.data.selected = -1
-  renderQuiz()
-  setTimeout(advance, 2000)
-}
-
-function advance() {
-  if (page.data.last && page.data.last.gameOver) {
-    page = { name: 'result', data: {} }; buttons = []; renderResult(); return
+    renderDayScene()
+  } else {
+    foxMood = 'sad'
+    renderDayScene()
+    // 简单提示
+    renderer.text('❌ ' + result.msg, W / 2, H / 2, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
   }
-  if (engine.roundComplete) {
-    page = { name: 'result', data: {} }; buttons = []; renderResult(); return
-  }
-  page.data.answered = false
-  page.data.last = null
-  page.data.timerStart = Date.now()
-  page.data.timerRemaining = C.quiz.timePerQuestion
-  renderQuiz()
-  startTimer()
 }
 
-function startTimer() {
-  clearInterval(timerInterval)
-  timerInterval = setInterval(function () {
-    if (page.data.answered) return
-    page.data.timerRemaining = Math.max(0, C.quiz.timePerQuestion - (Date.now() - page.data.timerStart) / 1000)
-    renderQuiz()
-    if (page.data.timerRemaining <= 0) { clearInterval(timerInterval); handleTimeout() }
-  }, 100)
+function handleCustomerTap(customerId) {
+  var c = engine.findCustomer(customerId)
+  if (!c) return
+  if (c.state !== 'waiting') return
+
+  // 如果顾客已经指定了菜单且玩家已发现该食谱，直接出餐
+  if (c.orderItem && engine.state.discoveredRecipes[c.orderItem]) {
+    var result = engine.startServing(customerId, c.orderItem)
+    if (result.success) {
+      foxMood = 'working'
+      renderDayScene()
+      return
+    }
+  }
+
+  // 否则打开食谱选择
+  page = { name: 'recipeChoice', data: { customerId: customerId } }
+  renderRecipeChoice(customerId)
+}
+
+function handleServeCustomer(customerId, recipeId) {
+  var result = engine.startServing(customerId, recipeId)
+  if (result.success) {
+    foxMood = 'working'
+    page = { name: 'dayScene', data: {} }
+    renderDayScene()
+  } else {
+    foxMood = 'sad'
+    renderRecipeChoice(customerId)
+    renderer.text('❌ ' + result.msg, W / 2, 380, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
+  }
+}
+
+function handleToggleIngredient(name) {
+  var idx = selectedIngredients.indexOf(name)
+  if (idx !== -1) {
+    selectedIngredients.splice(idx, 1)
+  } else {
+    if (selectedIngredients.length >= 5) return
+    selectedIngredients.push(name)
+  }
+  renderIngredientSelector()
+  // 显示已选数量
+  if (selectedIngredients.length > 0) {
+    renderer.text('✅ 已选 ' + selectedIngredients.length + ' 种', W / 2, 30, { fontSize: 14, color: C.theme.grassGreen, bold: true, align: 'center' })
+  }
+}
+
+function handleDiscover() {
+  if (selectedIngredients.length < 2) {
+    renderIngredientSelector()
+    renderer.text('❌ 至少选 2 种食材', W / 2, 60, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
+    return
+  }
+
+  // 去重
+  var uniqueIngs = []
+  for (var i = 0; i < selectedIngredients.length; i++) {
+    if (uniqueIngs.indexOf(selectedIngredients[i]) === -1) uniqueIngs.push(selectedIngredients[i])
+  }
+
+  var result = engine.attemptDiscover(uniqueIngs)
+  if (result.success) {
+    page = { name: 'discoverResult', data: { discoverResult: result } }
+    renderDiscoverResult()
+  } else {
+    renderIngredientSelector()
+    renderer.text('❌ ' + result.msg, W / 2, 60, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
+  }
+}
+
+function handleAddToMenu(recipeId) {
+  engine.addToMenu(recipeId)
+  renderMenuManage()
+}
+
+function handleRemoveFromMenu(recipeId) {
+  engine.removeFromMenu(recipeId)
+  renderMenuManage()
+}
+
+function handleBuyWholesale(index) {
+  var result = engine.buyWholesaleItem(index)
+  if (result.success) {
+    renderWholesale()
+    renderer.text('✅ 购买 ' + result.name + ' ×' + result.quantity, W / 2, 30, { fontSize: 13, color: C.theme.grassGreen, bold: true, align: 'center' })
+  } else {
+    renderWholesale()
+    renderer.text('❌ ' + result.msg, W / 2, 30, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
+  }
+}
+
+function handleRefreshWholesale() {
+  var result = engine.refreshWholesale()
+  if (result.success) {
+    renderWholesale()
+  } else {
+    renderWholesale()
+    renderer.text('❌ ' + result.msg, W / 2, 30, { fontSize: 13, color: C.theme.tomatoRed, bold: true, align: 'center' })
+  }
+}
+
+function handleUpgradeShop() {
+  var result = engine.upgradeShop()
+  if (result.success) {
+    foxMood = 'excited'
+    renderUpgrade()
+    renderer.text('🎉 店铺升级！Lv.' + result.newLevel, W / 2, 180, { fontSize: 16, color: C.theme.eggYellow, bold: true, align: 'center' })
+  } else {
+    foxMood = 'sad'
+    renderUpgrade()
+  }
+}
+
+function handleUpgradeFox() {
+  var result = engine.upgradeFox()
+  if (result.success) {
+    foxMood = 'excited'
+    renderUpgrade()
+    renderer.text('🎉 狐狸升级！Lv.' + result.newLevel, W / 2, 280, { fontSize: 16, color: C.theme.eggYellow, bold: true, align: 'center' })
+  } else {
+    foxMood = 'sad'
+    renderUpgrade()
+  }
+}
+
+// ======== 定时更新 ========
+
+function tick() {
+  var now = Date.now()
+  var elapsed = now - engine.state.periodStartTime
+
+  // 昼夜切换检查
+  if (engine.state.currentPeriod === 'day') {
+      if (elapsed >= C.dayDuration) {
+        // 清除探索计时器
+        if (exploreTimer) { clearTimeout(exploreTimer); exploreTimer = null }
+        engine.switchToNight()
+      page = { name: 'nightScene', data: {} }
+      renderNightScene()
+      return
+    }
+    // 白天逻辑
+    updateDay(now)
+  } else if (engine.state.currentPeriod === 'night') {
+    if (elapsed >= C.nightDuration) {
+      engine.switchToDay()
+      page = { name: 'dayScene', data: {} }
+      renderDayScene()
+      return
+    }
+    // 夜晚只更新倒计时
+  }
+
+  // 刷新当前页面
+  refreshCurrentPage()
+}
+
+function updateDay(now) {
+  // 顾客生成
+  var maxCustomers = engine.getMaxCustomers()
+  if (engine.state.currentCustomers.length < maxCustomers) {
+    // 随机概率生成
+    if (Math.random() < C.customer.generateChance) {
+      // 避免生成太密集，检查上一个顾客生成时间
+      var lastCustomer = engine.state.currentCustomers[engine.state.currentCustomers.length - 1]
+      if (!lastCustomer || (now - lastCustomer.enterTime) > 2000) {
+        var customer = engine.generateCustomer()
+        engine.state.currentCustomers.push(customer)
+      }
+    }
+  }
+
+  // 更新所有顾客
+  var customers = engine.state.currentCustomers
+  for (var i = customers.length - 1; i >= 0; i--) {
+    engine.updateCustomer(customers[i])
+  }
+}
+
+function refreshCurrentPage() {
+  switch (page.name) {
+    case 'dayScene':
+      renderDayScene()
+      break
+    case 'nightScene':
+      renderNightScene()
+      break
+    case 'recipeChoice':
+      renderRecipeChoice(page.data.customerId)
+      break
+    case 'upgrade':
+      renderUpgrade()
+      break
+    case 'stats':
+      renderStats()
+      break
+    case 'menuManage':
+      renderMenuManage()
+      break
+    // 弹窗不自动刷新
+  }
 }
 
 // ======== 触摸 ========
-wx.onTouchStart(function (e) { touchX = e.touches[0].x; touchY = e.touches[0].y })
+
+wx.onTouchStart(function (e) {
+  touchX = e.touches[0].x
+  touchY = e.touches[0].y
+})
+
 wx.onTouchEnd(function (e) {
-  var ex = e.changedTouches[0].x, ey = e.changedTouches[0].y
+  var ex = e.changedTouches[0].x
+  var ey = e.changedTouches[0].y
   if (Math.abs(ex - touchX) > 15 || Math.abs(ey - touchY) > 15) return
+
   for (var i = 0; i < buttons.length; i++) {
     var b = buttons[i]
-    if (ex >= b.x && ex <= b.x + b.w && ey >= b.y && ey <= b.y + b.h) { handleAction(b); return }
+    if (ex >= b.x && ex <= b.x + b.w && ey >= b.y && ey <= b.y + b.h) {
+      handleAction(b)
+      return
+    }
   }
 })
 
 // ======== 启动 ========
-renderIndex()
+
+// 如果离线有收益，弹出提示
+if (offlineResult && offlineResult.gold > 0) {
+  setTimeout(function () {
+    alert('🎉 离线收益: +' + offlineResult.gold + ' 金币 (' + offlineResult.elapsedMinutes + '分钟)')
+  }, 500)
+}
+
+// 切换到首场景
+if (engine.state.currentPeriod === 'day') {
+  page = { name: 'dayScene', data: {} }
+  renderDayScene()
+} else {
+  page = { name: 'nightScene', data: {} }
+  renderNightScene()
+}
+
+// 定时刷新
+tickInterval = setInterval(tick, 500)
 
