@@ -53,14 +53,25 @@
 
 // ====== config.js ======
 /**
- * 狐狸的配料食堂 - 游戏配置
+ * 狐狸的烘焙坊 - 游戏配置
  */
 window.GameConfig = {
-  gameName: '狐狸的配料食堂',
+  gameName: '🦊 狐狸的烘焙坊',
   version: '2.0.0',
 
   // 初始状态
-  initialGold: 100,
+  initialGold: 200,
+
+  // 开局默认仓库食材
+  initialInventory: {
+    '小麦粉': 10, '黄油': 8, '白砂糖': 10, '鸡蛋': 8,
+    '水': 5, '植物油': 5, '食用盐': 3, '酵母': 3,
+    '牛奶': 5, '淡奶油': 3, '奶油': 3, '香草精': 3,
+    '可可粉': 3, '巧克力': 2, '坚果': 2, '杏仁粉': 2,
+  },
+
+  // 开局默认发现的食谱
+  initialRecipes: ['butterCookie', 'spongeCake', 'eggTart'],
 
   // 昼夜周期（毫秒）
   dayDuration: 3 * 60 * 1000,    // 3分钟
@@ -68,20 +79,20 @@ window.GameConfig = {
 
   // 店铺等级
   shopLevels: [
-    { level: 1, name: '路边摊', upgradeCost: 0, maxCustomers: 2, menuSlots: 3, maxInventory: 30, maxOfflineHours: 2 },
-    { level: 2, name: '小餐馆', upgradeCost: 200, maxCustomers: 3, menuSlots: 4, maxInventory: 40, maxOfflineHours: 4 },
-    { level: 3, name: '美食屋', upgradeCost: 500, maxCustomers: 4, menuSlots: 5, maxInventory: 50, maxOfflineHours: 6 },
-    { level: 4, name: '热门餐厅', upgradeCost: 1200, maxCustomers: 5, menuSlots: 6, maxInventory: 60, maxOfflineHours: 8 },
-    { level: 5, name: '米其林食堂', upgradeCost: 3000, maxCustomers: 6, menuSlots: 8, maxInventory: 80, maxOfflineHours: 12 },
+    { level: 1, name: '烘焙小摊', upgradeCost: 0, maxCustomers: 2, menuSlots: 3, maxInventory: 30, maxOfflineHours: 2 },
+    { level: 2, name: '面包小铺', upgradeCost: 200, maxCustomers: 3, menuSlots: 4, maxInventory: 40, maxOfflineHours: 4 },
+    { level: 3, name: '甜品屋', upgradeCost: 500, maxCustomers: 4, menuSlots: 5, maxInventory: 50, maxOfflineHours: 6 },
+    { level: 4, name: '人气烘焙坊', upgradeCost: 1200, maxCustomers: 5, menuSlots: 6, maxInventory: 60, maxOfflineHours: 8 },
+    { level: 5, name: '米其林甜品殿堂', upgradeCost: 3000, maxCustomers: 6, menuSlots: 8, maxInventory: 80, maxOfflineHours: 12 },
   ],
 
   // 狐狸等级
   foxLevels: [
-    { level: 1, name: '实习狐狸', icon: '🐣', serveSpeed: 1.0, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 0 },
-    { level: 2, name: '初级厨师', icon: '🦊', serveSpeed: 1.2, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 100 },
-    { level: 3, name: '熟练厨师', icon: '🥼', serveSpeed: 1.4, exploreQuality: 1.2, customerFavor: 1.1, upgradeCost: 300 },
-    { level: 4, name: '主厨狐狸', icon: '🔬', serveSpeed: 1.6, exploreQuality: 1.3, customerFavor: 1.2, upgradeCost: 800 },
-    { level: 5, name: '食神狐狸', icon: '👑', serveSpeed: 2.0, exploreQuality: 1.5, customerFavor: 1.3, upgradeCost: 2000 },
+    { level: 1, name: '实习面点狐', icon: '🐣', serveSpeed: 1.0, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 0 },
+    { level: 2, name: '初级烘焙狐', icon: '🦊', serveSpeed: 1.2, exploreQuality: 1.0, customerFavor: 1.0, upgradeCost: 100 },
+    { level: 3, name: '熟练甜点师', icon: '🥼', serveSpeed: 1.4, exploreQuality: 1.2, customerFavor: 1.1, upgradeCost: 300 },
+    { level: 4, name: '金牌主厨狐', icon: '🔬', serveSpeed: 1.6, exploreQuality: 1.3, customerFavor: 1.2, upgradeCost: 800 },
+    { level: 5, name: '烘焙食神', icon: '👑', serveSpeed: 2.0, exploreQuality: 1.5, customerFavor: 1.3, upgradeCost: 2000 },
   ],
 
   // 探索配置
@@ -128,7 +139,7 @@ window.GameConfig = {
     refreshCost: 20,    // 刷新费用
   },
 
-  // 主题色（保留原有）
+  // 主题色（烘焙暖色系）
   theme: {
     warmOrange: '#FF7A33',
     creamWhite: '#FFF8EE',
@@ -520,19 +531,65 @@ window.QuestionBank = [
 
 // ====== recipeChain.js ======
 /**
- * 狐狸的配料食堂 - 食谱链数据
+ * 狐狸的烘焙坊 - 食谱链数据
+ * 只包含面包、蛋糕、甜品、小吃品类
  * 每个食谱通过 chain.parent + chain.added 关联形成衍生关系
  */
 window.RecipeChain = {
   // ======== 食谱列表 ========
   recipes: [
-    // ===== 链1: 牛角包家族 =====
+    // ===== 链1: 曲奇饼干家族 =====
+    {
+      id: 'butterCookie', name: '黄油曲奇', icon: '🍪', starRating: 2,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 21,
+    },
+    {
+      id: 'chocoCookie', name: '巧克力曲奇', icon: '🍪', starRating: 3,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '巧克力'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'butterCookie', added: '巧克力', depth: 1 },
+      price: 29,
+    },
+    {
+      id: 'nutCookie', name: '坚果脆曲奇', icon: '🥜', starRating: 4,
+      ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '巧克力', '坚果'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'chocoCookie', added: '坚果', depth: 2 },
+      price: 37,
+    },
+
+    // ===== 链2: 蛋糕家族 =====
+    {
+      id: 'spongeCake', name: '海绵蛋糕', icon: '🎂', starRating: 2,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '植物油', '水'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 21,
+    },
+    {
+      id: 'creamCake', name: '奶油蛋糕', icon: '🍰', starRating: 3,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '植物油', '淡奶油', '水'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'spongeCake', added: '淡奶油', depth: 1 },
+      price: 29,
+    },
+    {
+      id: 'blackForest', name: '黑森林蛋糕', icon: '🍫', starRating: 4,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '植物油', '淡奶油', '水', '巧克力', '可可粉'],
+      category: 'bakery',
+      chain: { isBase: false, parent: 'creamCake', added: ['巧克力', '可可粉'], depth: 2 },
+      price: 37,
+    },
+
+    // ===== 链3: 牛角包家族 =====
     {
       id: 'croissant', name: '牛角包', icon: '🥐', starRating: 2,
       ingredients: ['小麦粉', '黄油', '白砂糖', '鸡蛋', '酵母'],
       category: 'bakery',
       chain: { isBase: true, parent: null, added: null, depth: 0 },
-      sourceQuestionId: 'bakery_002',
       price: 21,
     },
     {
@@ -550,75 +607,80 @@ window.RecipeChain = {
       price: 37,
     },
 
-    // ===== 链2: 薯片家族 =====
+    // ===== 独立甜品食谱 =====
     {
-      id: 'plainChips', name: '原味薯片', icon: '🥔', starRating: 2,
-      ingredients: ['马铃薯', '植物油', '食用盐'],
-      category: 'snack',
-      chain: { isBase: true, parent: null, added: null, depth: 0 },
-      sourceQuestionId: 'snack_001',
-      price: 21,
-    },
-    {
-      id: 'tomatoChips', name: '番茄味薯片', icon: '🍅', starRating: 3,
-      ingredients: ['马铃薯', '植物油', '食用盐', '番茄', '白砂糖'],
-      category: 'snack',
-      chain: { isBase: false, parent: 'plainChips', added: ['番茄', '白砂糖'], depth: 1 },
-      price: 29,
-    },
-    {
-      id: 'truffleChips', name: '黑松露薯片', icon: '🍄', starRating: 4,
-      ingredients: ['马铃薯', '植物油', '食用盐', '黑松露', '橄榄油'],
-      category: 'snack',
-      chain: { isBase: false, parent: 'plainChips', added: ['黑松露', '橄榄油'], depth: 1 },
-      price: 37,
-    },
-
-    // ===== 链3: 巧克力家族 =====
-    {
-      id: 'pureChocolate', name: '纯巧克力', icon: '🍫', starRating: 2,
-      ingredients: ['可可粉', '可可脂', '白砂糖'],
-      category: 'snack',
-      chain: { isBase: true, parent: null, added: null, depth: 0 },
-      sourceQuestionId: 'snack_004',
-      price: 21,
-    },
-    {
-      id: 'nutChocolate', name: '坚果巧克力', icon: '🌰', starRating: 3,
-      ingredients: ['可可粉', '可可脂', '白砂糖', '坚果'],
-      category: 'snack',
-      chain: { isBase: false, parent: 'pureChocolate', added: '坚果', depth: 1 },
-      price: 29,
-    },
-    {
-      id: 'liquorChocolate', name: '酒心巧克力', icon: '🍷', starRating: 4,
-      ingredients: ['可可粉', '可可脂', '白砂糖', '淡奶油', '朗姆酒'],
-      category: 'snack',
-      chain: { isBase: false, parent: 'pureChocolate', added: ['淡奶油', '朗姆酒'], depth: 1 },
-      price: 37,
-    },
-
-    // ===== 额外独立食谱（不参与链衍生，仅用于菜单多样性）=====
-    {
-      id: 'spongeCake', name: '海绵蛋糕', icon: '🎂', starRating: 2,
-      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '植物油', '水'],
+      id: 'eggTart', name: '蛋挞', icon: '🥧', starRating: 2,
+      ingredients: ['小麦粉', '黄油', '鸡蛋', '白砂糖', '淡奶油', '牛奶'],
       category: 'bakery',
       chain: { isBase: true, parent: null, added: null, depth: 0 },
-      sourceQuestionId: 'bakery_003',
       price: 21,
     },
     {
-      id: 'iceCream', name: '冰淇淋', icon: '🍦', starRating: 2,
-      ingredients: ['水', '白砂糖', '乳粉', '奶油', '蛋黄'],
+      id: 'pudding', name: '焦糖布丁', icon: '🍮', starRating: 2,
+      ingredients: ['鸡蛋', '牛奶', '白砂糖', '香草精'],
+      category: 'dessert',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 21,
+    },
+    {
+      id: 'iceCream', name: '香草冰淇淋', icon: '🍦', starRating: 2,
+      ingredients: ['牛奶', '白砂糖', '奶油', '蛋黄', '香草精'],
       category: 'icecream',
       chain: { isBase: true, parent: null, added: null, depth: 0 },
-      sourceQuestionId: 'icecream_003',
       price: 21,
+    },
+    {
+      id: 'waffle', name: '华夫饼', icon: '🧇', starRating: 2,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '黄油', '牛奶'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 23,
+    },
+    {
+      id: 'donut', name: '甜甜圈', icon: '🍩', starRating: 2,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '黄油', '植物油', '牛奶'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 21,
+    },
+    {
+      id: 'swissRoll', name: '瑞士卷', icon: '🫔', starRating: 3,
+      ingredients: ['小麦粉', '鸡蛋', '白砂糖', '淡奶油', '牛奶'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 29,
+    },
+    {
+      id: 'macaron', name: '马卡龙', icon: '🟣', starRating: 3,
+      ingredients: ['杏仁粉', '白砂糖', '鸡蛋', '奶油', '食用色素'],
+      category: 'bakery',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 31,
+    },
+    {
+      id: 'mooncake', name: '冰皮月饼', icon: '🥮', starRating: 3,
+      ingredients: ['小麦粉', '糯米粉', '白砂糖', '牛奶', '红豆沙'],
+      category: 'dessert',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 29,
+    },
+    {
+      id: 'tiramisu', name: '提拉米苏', icon: '☕', starRating: 4,
+      ingredients: ['鸡蛋', '奶油', '白砂糖', '可可粉', '咖啡', '淡奶油'],
+      category: 'dessert',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 37,
+    },
+    {
+      id: 'matchaIce', name: '抹茶冰淇淋', icon: '🍵', starRating: 3,
+      ingredients: ['牛奶', '白砂糖', '奶油', '蛋黄', '抹茶粉'],
+      category: 'icecream',
+      chain: { isBase: true, parent: null, added: null, depth: 0 },
+      price: 27,
     },
   ],
 
   // ======== 食材稀有度 ========
-  // 用于探索概率和食谱价值计算
   ingredientRarity: {
     '小麦粉': 'common',
     '黄油': 'common',
@@ -628,20 +690,22 @@ window.RecipeChain = {
     '水': 'common',
     '植物油': 'common',
     '食用盐': 'common',
-    '马铃薯': 'common',
-    '可可粉': 'common',
-    '可可脂': 'common',
-    '乳粉': 'common',
+    '牛奶': 'common',
     '奶油': 'common',
     '蛋黄': 'common',
-    '番茄': 'uncommon',
+    '香草精': 'common',
+    '红豆沙': 'common',
+    '糯米粉': 'common',
     '淡奶油': 'uncommon',
-    '橄榄油': 'uncommon',
+    '巧克力': 'uncommon',
+    '可可粉': 'uncommon',
     '坚果': 'uncommon',
     '芝士片': 'uncommon',
-    '黑松露': 'rare',
+    '抹茶粉': 'uncommon',
+    '杏仁粉': 'uncommon',
+    '咖啡': 'uncommon',
     '马苏里拉芝士': 'rare',
-    '朗姆酒': 'rare',
+    '食用色素': 'rare',
   },
 
   // ======== 辅助函数 ========
@@ -702,14 +766,14 @@ window.RecipeChain = {
     return true
   },
 
-  /** 获取食材稀有度分数（用于匹配优先级） */
+  /** 获取食材稀有度分数 */
   getIngredientScore: function (name) {
     var rarity = this.ingredientRarity[name] || 'common'
     var scores = { common: 1, uncommon: 2, rare: 3 }
     return scores[rarity] || 1
   },
 
-  /** 计算一组食材的组合分数（稀有食材越多分越高） */
+  /** 计算一组食材的组合分数 */
   calculateComboValue: function (ingredients) {
     var totalScore = 0
     for (var i = 0; i < ingredients.length; i++) {
@@ -717,12 +781,34 @@ window.RecipeChain = {
     }
     return { score: totalScore, xp: Math.max(1, Math.floor(totalScore / 2)) }
   },
+
+  /** 新增食材（不在任何食谱中，仅用于探索） */
+  extraIngredients: {
+    '草莓': 'uncommon',
+    '蓝莓': 'uncommon',
+    '芒果': 'uncommon',
+    '蜂蜜': 'common',
+    '柠檬汁': 'common',
+    '椰子粉': 'common',
+    '杏仁片': 'uncommon',
+    '芝麻': 'common',
+    '肉桂粉': 'common',
+    '吉利丁': 'common',
+  },
+
+  /** 获取所有可探索食材（含 extra） */
+  getAllIngredients: function () {
+    var all = {}
+    for (var k in this.ingredientRarity) all[k] = this.ingredientRarity[k]
+    for (var k in this.extraIngredients) all[k] = this.extraIngredients[k]
+    return all
+  },
 }
 
 
 // ====== gameEngine.js ======
 /**
- * 狐狸的配料食堂 - 游戏引擎
+ * 狐狸的烘焙坊 - 游戏引擎
  * 核心状态机：昼夜切换、存档、升级、食谱发现、顾客经营
  */
 var C = window.GameConfig
@@ -768,6 +854,22 @@ GameEngine.prototype.load = function () {
 }
 
 GameEngine.prototype.reset = function () {
+  // 初始食材
+  var initInv = {}
+  if (C.initialInventory) {
+    for (var k in C.initialInventory) {
+      initInv[k] = C.initialInventory[k]
+    }
+  }
+
+  // 初始食谱
+  var initRecipes = {}
+  if (C.initialRecipes && C.initialRecipes.length > 0) {
+    for (var i = 0; i < C.initialRecipes.length; i++) {
+      initRecipes[C.initialRecipes[i]] = { count: 1, xp: 1, lastDiscovered: Date.now() }
+    }
+  }
+
   this.state = {
     version: C.version,
     gold: C.initialGold,
@@ -782,20 +884,20 @@ GameEngine.prototype.reset = function () {
     shopLevel: 1,
     foxLevel: 1,
 
-    // 食材仓库
-    inventory: {},
+    // 食材仓库（初始自带一批烘焙基础食材）
+    inventory: initInv,
     maxInventory: C.shopLevels[0].maxInventory,
 
-    // 食谱系统
-    discoveredRecipes: {},
+    // 食谱系统（初始默认发现 3 道基础甜品）
+    discoveredRecipes: initRecipes,
 
     // 顾客
     currentCustomers: [],
     servedToday: 0,
     totalServed: 0,
 
-    // 菜单
-    menu: this._getDefaultMenu(),
+    // 菜单（初始上架默认食谱）
+    menu: C.initialRecipes ? C.initialRecipes.slice() : this._getDefaultMenu(),
     maxMenuSlots: C.shopLevels[0].menuSlots,
 
     // 探索
@@ -810,7 +912,7 @@ GameEngine.prototype.reset = function () {
     stats: {
       dayCount: 0,
       totalCustomers: 0,
-      totalRecipesDiscovered: 0,
+      totalRecipesDiscovered: C.initialRecipes ? C.initialRecipes.length : 0,
       totalExploreCount: 0,
     },
   }
@@ -1166,13 +1268,14 @@ GameEngine.prototype.completeExplore = function () {
 
 GameEngine.prototype._rollIngredient = function (quality) {
   // 根据探索品质随机食材
-  var allIngredients = Object.keys(RC.ingredientRarity)
+  var allIngredients = Object.keys(RC.getAllIngredients())
   if (allIngredients.length === 0) return null
 
   // 按稀有度加权: quality 越高, 稀有食材概率越大
+  var allRarity = RC.getAllIngredients()
   var weights = []
   for (var i = 0; i < allIngredients.length; i++) {
-    var rarity = RC.ingredientRarity[allIngredients[i]] || 'common'
+    var rarity = allRarity[allIngredients[i]] || 'common'
     var w = rarity === 'common' ? 50 : rarity === 'uncommon' ? 30 : 20
     w = Math.floor(w * quality)
     weights.push(w)
@@ -1450,7 +1553,7 @@ window.GameEngine = GameEngine
 
 // ====== renderer.js ======
 /**
- * 狐狸的配料食堂 - Canvas渲染器
+ * 狐狸的烘焙坊 - Canvas渲染器
  * 白天场景、夜晚场景、弹窗、升级、统计
  */
 var C = window.GameConfig
@@ -2139,7 +2242,7 @@ window.Renderer = Renderer
 
 // ====== main.js ======
 /**
- * 狐狸的配料食堂 - 游戏主入口
+ * 狐狸的烘焙坊 - 游戏主入口
  * 昼夜循环、触摸交互、页面流转
  */
 var C = window.GameConfig
